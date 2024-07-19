@@ -36,7 +36,7 @@ describe('Triple', () => {
     });
   });
 
-  describe('getLinkedSubjectGroup', () => {
+  describe('getLinkedStarPattern', () => {
     it('should return the linked object if it is a named node', () => {
       const triple = new Triple({
         subject: 'a',
@@ -44,7 +44,7 @@ describe('Triple', () => {
         object: AN_OBJECT,
       });
 
-      expect(triple.getLinkedSubjectGroup()).toStrictEqual(AN_OBJECT.value);
+      expect(triple.getLinkedStarPattern()).toStrictEqual(AN_OBJECT.value);
     });
 
     it('should return the variable', () => {
@@ -54,7 +54,7 @@ describe('Triple', () => {
         object: DF.variable('foo'),
       });
 
-      expect(triple.getLinkedSubjectGroup()).toBe('foo');
+      expect(triple.getLinkedStarPattern()).toBe('foo');
     });
   });
 });

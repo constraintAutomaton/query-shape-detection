@@ -1,6 +1,60 @@
 import type { Term } from '@rdfjs/types';
 import { Algebra, Util } from 'sparqlalgebrajs';
-import { ITripleArgs, ITripleWithDependencies, Triple, type IStarPatternWithDependencies } from './Triple';
+import { ITripleArgs, ITripleWithDependencies, Triple, IOneOf, type IStarPatternWithDependencies } from './Triple';
+
+type OneOfRawData = Map<string, { oneOfs: IOneOf[], isVariable: boolean }>;
+
+function handleAltPropertyPath(element: any, oneOfs: OneOfRawData) {
+  const subject = element.subject as Term;
+  const object = element.object as Term;
+  const predicates = element.predicate.input;
+  let currentOneOf = oneOfs.get(subject.value);
+  if (!currentOneOf) {
+    oneOfs.set(subject.value,
+      {
+        oneOfs: [],
+        isVariable: subject.termType === "Variable",
+      }
+    );
+    currentOneOf = oneOfs.get(subject.value)!;
+  }
+  currentOneOf.oneOfs.push({ options: [] });
+  for (const predicate of predicates) {
+    currentOneOf.oneOfs.at(-1)!.options.push({ triple: new Triple({ subject: subject.value, predicate: predicate.iri.value, object }) })
+  }
+}
+
+function handleCardinalityPropertyPath(element: any): { triple: ITripleArgs, isVariable: boolean } | undefined {
+  const subject = element.subject as Term;
+  const object = element.object as Term;
+  const predicate = element.predicate.path.iri;
+  const predicateCardinality = element.predicate.type;
+  let cardinality = undefined;
+  switch (predicateCardinality) {
+    case Algebra.types.ZERO_OR_MORE_PATH:
+      cardinality = { min: 0, max: -1 }
+      break;
+    case Algebra.types.ZERO_OR_ONE_PATH:
+      cardinality = { min: 0, max: 1 };
+      break;
+    case Algebra.types.ONE_OR_MORE_PATH:
+      cardinality = { min: 1, max: -1 };
+      break;
+  }
+  if (cardinality) {
+    return {
+      triple: { subject: subject.value, predicate: predicate.value, object: object, cardinality },
+      isVariable: subject.termType === "Variable"
+    };
+  }
+
+}
+
+function isACardinalityPropertyPath(predicateType: string): boolean {
+  return predicateType === Algebra.types.ZERO_OR_MORE_PATH ||
+    predicateType === Algebra.types.ZERO_OR_ONE_PATH ||
+    predicateType === Algebra.types.ONE_OR_MORE_PATH;
+}
 
 /**
  * A query divided into subject group
@@ -20,6 +74,7 @@ export interface IQuery {
  */
 export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   const resp = new Map<string, { triples: ITripleArgs[], isVariable: boolean }>();
+  const oneOfs: OneOfRawData = new Map();
   // the binding value to the value
   const values = new Map<string, Term[]>();
 
@@ -28,16 +83,16 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     const predicate = quad.predicate as Term;
     const object = quad.object as Term;
     if (predicate.termType === 'NamedNode') {
-      const subjectGroup = resp.get(subject.value);
+      const startPattern = resp.get(subject.value);
       const propertyObject: ITripleArgs = {
         subject: subject.value,
         predicate: quad.predicate.value,
         object,
       };
-      if (subjectGroup === undefined) {
+      if (startPattern === undefined) {
         resp.set(subject.value, { triples: [propertyObject], isVariable: subject.termType === "Variable" });
       } else {
-        subjectGroup.triples.push(propertyObject);
+        startPattern.triples.push(propertyObject);
       }
     }
     return true;
@@ -61,21 +116,46 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     return true;
   }
 
+  const handlePath = (element: any): boolean => {
+    const path = element.predicate.type;
+    if (path === Algebra.types.ALT) {
+      handleAltPropertyPath(element, oneOfs);
+    } else if (isACardinalityPropertyPath(path)) {
+      const subject = element.subject as Term;
+      const startPattern = resp.get(subject.value);
+      const triple = handleCardinalityPropertyPath(element);
+      if (triple !== undefined) {
+        if (startPattern === undefined) {
+          resp.set(subject.value, { triples: [triple.triple], isVariable: triple.isVariable });
+        } else {
+          startPattern.triples.push(triple.triple);
+        }
+      }
+    }
+    return true;
+  };
+
   Util.recurseOperation(
     algebraQuery,
     {
       [Algebra.types.PATTERN]: addProperty,
       [Algebra.types.VALUES]: addValues,
+      [Algebra.types.PATH]: handlePath
     },
   );
 
 
-  return joinTriplesWithProperties(resp, values);
+  return joinTriplesWithProperties(resp, values, oneOfs);
 }
 
-function joinTriplesWithProperties(tripleArgs: Map<string, { triples: ITripleArgs[], isVariable: boolean }>, values: Map<string, Term[]>): IQuery {
+function joinTriplesWithProperties(
+  tripleArgs: Map<string, { triples: ITripleArgs[], isVariable: boolean }>,
+  values: Map<string, Term[]>,
+  oneOfs: OneOfRawData
+): IQuery {
   const innerQuery = new Map<string, IStarPatternWithDependencies>();
   const resp: IQuery = { starPatterns: innerQuery, filterExpression: "" };
+  const unHandledOneOf: Set<string> = new Set(oneOfs.keys());
 
   for (const [subjectGroupName, { triples, isVariable }] of tripleArgs) {
     for (const tripleArg of triples) {
@@ -93,12 +173,14 @@ function joinTriplesWithProperties(tripleArgs: Map<string, { triples: ITripleArg
 
       if (starPattern === undefined) {
         const predicateWithDependencies: ITripleWithDependencies = { triple: triple, dependencies: undefined };
+        unHandledOneOf.delete(subjectGroupName);
         innerQuery.set(subjectGroupName, {
           starPattern: new Map([
             [triple.predicate, predicateWithDependencies]
           ]),
           name: subjectGroupName,
-          isVariable: isVariable
+          isVariable: isVariable,
+          oneOfs: oneOfs.get(subjectGroupName)?.oneOfs ?? []
         });
       } else {
         const predicateWithDependencies: ITripleWithDependencies = { triple: triple, dependencies: undefined };
@@ -106,10 +188,30 @@ function joinTriplesWithProperties(tripleArgs: Map<string, { triples: ITripleArg
       }
     }
   }
+  for (const subjectGroupName of unHandledOneOf) {
+    innerQuery.set(subjectGroupName, {
+      starPattern: new Map(),
+      name: subjectGroupName,
+      isVariable: oneOfs.get(subjectGroupName)!.isVariable,
+      oneOfs: oneOfs.get(subjectGroupName)!.oneOfs
+    });
+    let i = 0;
+    for (const oneOf of oneOfs.get(subjectGroupName)!.oneOfs) {
+      const triple = oneOf.options[0].triple;
+      const linkedSubjectGroup = triple.getLinkedStarPattern();
+      if (linkedSubjectGroup !== undefined) {
+        const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
+        if (dependenStarPattern !== undefined) {
+          innerQuery.get(subjectGroupName)!.oneOfs[i].dependencies = dependenStarPattern;
+        }
+      }
+      i += 1;
+    }
+  }
 
   for (const [subjectGroup, starPatternWithDependencies] of innerQuery) {
     for (const [predicat, { triple }] of starPatternWithDependencies.starPattern) {
-      const linkedSubjectGroup = triple.getLinkedSubjectGroup();
+      const linkedSubjectGroup = triple.getLinkedStarPattern();
       if (linkedSubjectGroup !== undefined) {
         const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
         if (dependenStarPattern !== undefined) {
@@ -117,6 +219,9 @@ function joinTriplesWithProperties(tripleArgs: Map<string, { triples: ITripleArg
         }
       }
     }
+
   }
+
+
   return resp;
 }

@@ -501,7 +501,8 @@ describe('solveShapeQueryContainment', () => {
                     ],
                 ]),
                 name: "x",
-                isVariable:true
+                isVariable: true,
+                oneOfs: []
             };
 
             return starPattern;
@@ -526,7 +527,8 @@ describe('solveShapeQueryContainment', () => {
                     ],
                 ]),
                 name: "z",
-                isVariable:true
+                isVariable: true,
+                oneOfs: []
             };
 
             return starPattern;
@@ -551,7 +553,8 @@ describe('solveShapeQueryContainment', () => {
                     ],
                 ]),
                 name: "z",
-                isVariable:true
+                isVariable: true,
+                oneOfs: []
             };
 
             return starPattern;
@@ -646,7 +649,7 @@ WHERE
             ]);
             const starPatternsContainment = new Map<StarPatternName, IContainmentResult>([
                 ["http://localhost:3000/pods/00000000000000000150/comments/Mexico#68719564521", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment", "http://example.com#Post"] }],
-                ["creator", { result: ContainmentResult.DEPEND, target:["http://example.com#Profile"] }]
+                ["creator", { result: ContainmentResult.DEPEND, target: ["http://example.com#Profile"] }]
             ]);
 
 
@@ -884,10 +887,10 @@ WHERE
                 ["http://example.com#Profile", true]
             ]);
             const starPatternsContainment = new Map<StarPatternName, IContainmentResult>([
-                ["http://localhost:3000/pods/00000002199023256816/profile/card#me", { result: ContainmentResult.DEPEND, target:["http://example.com#Profile"] }],
-                ["message", { result: ContainmentResult.DEPEND, target:["http://example.com#Post", "http://example.com#Comment"] }],
+                ["http://localhost:3000/pods/00000002199023256816/profile/card#me", { result: ContainmentResult.DEPEND, target: ["http://example.com#Profile"] }],
+                ["message", { result: ContainmentResult.DEPEND, target: ["http://example.com#Post", "http://example.com#Comment"] }],
                 ["comment", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment"] }],
-                ["person", { result: ContainmentResult.DEPEND, target:["http://example.com#Profile"] }],
+                ["person", { result: ContainmentResult.DEPEND, target: ["http://example.com#Profile"] }],
             ]);
 
             expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
