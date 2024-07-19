@@ -13,7 +13,9 @@ export default tseslint.config(
   {
     ignores: [
       "**/*.js",
-      "**/*.mjs"
+      "**/*.mjs",
+      "node_modules/*",
+      ".yarn/*"
     ]
   }
 );
