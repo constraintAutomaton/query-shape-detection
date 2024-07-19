@@ -1031,6 +1031,7 @@ describe('query', () => {
           }
         });
       });
+      
     });
 
     describe("solidbench query", () => {

@@ -47,7 +47,38 @@ function handleCardinalityPropertyPath(element: any): { triple: ITripleArgs, isV
       isVariable: subject.termType === "Variable"
     };
   }
+}
 
+function handleNegatedPropertySet(element: any): { triple: ITripleArgs, isVariable: boolean } | undefined {
+  const subject = element.subject as Term;
+  const object = element.object as Term;
+  const predicates = element.predicate.iris;
+  const negatedSet = new Set<string>();
+  for (const predicate of predicates) {
+    negatedSet.add(predicate.value);
+  }
+
+  return {
+    triple: {
+      subject: subject.value,
+      predicate: Triple.PREDICATE_SET,
+      object: object,
+      negatedSet: negatedSet
+    },
+    isVariable: subject.termType === "Variable"
+  };
+}
+
+function handleDirectPropertyPath(element: any, resp: Map<string, { triples: ITripleArgs[], isVariable: boolean }>, triple: { triple: ITripleArgs, isVariable: boolean } | undefined) {
+  const subject = element.subject as Term;
+  const startPattern = resp.get(subject.value);
+  if (triple !== undefined) {
+    if (startPattern === undefined) {
+      resp.set(subject.value, { triples: [triple.triple], isVariable: triple.isVariable });
+    } else {
+      startPattern.triples.push(triple.triple);
+    }
+  }
 }
 
 function isACardinalityPropertyPath(predicateType: string): boolean {
@@ -112,7 +143,6 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
         }
       }
     }
-
     return true;
   }
 
@@ -121,16 +151,11 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     if (path === Algebra.types.ALT) {
       handleAltPropertyPath(element, oneOfs);
     } else if (isACardinalityPropertyPath(path)) {
-      const subject = element.subject as Term;
-      const startPattern = resp.get(subject.value);
       const triple = handleCardinalityPropertyPath(element);
-      if (triple !== undefined) {
-        if (startPattern === undefined) {
-          resp.set(subject.value, { triples: [triple.triple], isVariable: triple.isVariable });
-        } else {
-          startPattern.triples.push(triple.triple);
-        }
-      }
+      handleDirectPropertyPath(element, resp, triple);
+    } else if (path === Algebra.types.NPS) {
+      const triple = handleNegatedPropertySet(element);
+      handleDirectPropertyPath(element, resp, triple);
     }
     return true;
   };
@@ -144,7 +169,6 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     },
   );
 
-
   return joinTriplesWithProperties(resp, values, oneOfs);
 }
 
@@ -157,7 +181,8 @@ function joinTriplesWithProperties(
   const resp: IQuery = { starPatterns: innerQuery, filterExpression: "" };
   const unHandledOneOf: Set<string> = new Set(oneOfs.keys());
 
-  for (const [subjectGroupName, { triples, isVariable }] of tripleArgs) {
+  // generate the root star patterns
+  for (const [starPatternSubject, { triples, isVariable }] of tripleArgs) {
     for (const tripleArg of triples) {
       let triple = new Triple(tripleArg);
       if (!Array.isArray(tripleArg.object) && tripleArg.object?.termType === "Variable") {
@@ -166,21 +191,19 @@ function joinTriplesWithProperties(
           tripleArg.object = value;
           triple = new Triple(tripleArg);
         }
-
       }
-
-      const starPattern = innerQuery.get(subjectGroupName);
+      const starPattern = innerQuery.get(starPatternSubject);
 
       if (starPattern === undefined) {
         const predicateWithDependencies: ITripleWithDependencies = { triple: triple, dependencies: undefined };
-        unHandledOneOf.delete(subjectGroupName);
-        innerQuery.set(subjectGroupName, {
+        unHandledOneOf.delete(starPatternSubject);
+        innerQuery.set(starPatternSubject, {
           starPattern: new Map([
             [triple.predicate, predicateWithDependencies]
           ]),
-          name: subjectGroupName,
+          name: starPatternSubject,
           isVariable: isVariable,
-          oneOfs: oneOfs.get(subjectGroupName)?.oneOfs ?? []
+          oneOfs: oneOfs.get(starPatternSubject)?.oneOfs ?? []
         });
       } else {
         const predicateWithDependencies: ITripleWithDependencies = { triple: triple, dependencies: undefined };
@@ -188,40 +211,49 @@ function joinTriplesWithProperties(
       }
     }
   }
-  for (const subjectGroupName of unHandledOneOf) {
-    innerQuery.set(subjectGroupName, {
+  // create a star pattern from the oneOf not nested in a current star pattern
+  for (const starPatternSubject of unHandledOneOf) {
+    innerQuery.set(starPatternSubject, {
       starPattern: new Map(),
-      name: subjectGroupName,
-      isVariable: oneOfs.get(subjectGroupName)!.isVariable,
-      oneOfs: oneOfs.get(subjectGroupName)!.oneOfs
+      name: starPatternSubject,
+      isVariable: oneOfs.get(starPatternSubject)!.isVariable,
+      oneOfs: oneOfs.get(starPatternSubject)!.oneOfs
     });
-    let i = 0;
-    for (const oneOf of oneOfs.get(subjectGroupName)!.oneOfs) {
-      const triple = oneOf.options[0].triple;
-      const linkedSubjectGroup = triple.getLinkedStarPattern();
-      if (linkedSubjectGroup !== undefined) {
-        const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
-        if (dependenStarPattern !== undefined) {
-          innerQuery.get(subjectGroupName)!.oneOfs[i].dependencies = dependenStarPattern;
-        }
-      }
-      i += 1;
+
+    // set the dependencies of the oneOf
+    for (let i = 0; i < oneOfs.get(starPatternSubject)!.oneOfs.length; i++) {
+      const oneOf = oneOfs.get(starPatternSubject)!.oneOfs[i];
+      addADependencyToOneOf(oneOf, innerQuery);
     }
   }
 
-  for (const [subjectGroup, starPatternWithDependencies] of innerQuery) {
-    for (const [predicat, { triple }] of starPatternWithDependencies.starPattern) {
-      const linkedSubjectGroup = triple.getLinkedStarPattern();
-      if (linkedSubjectGroup !== undefined) {
-        const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
-        if (dependenStarPattern !== undefined) {
-          innerQuery.get(subjectGroup)!.starPattern.get(predicat)!.dependencies = dependenStarPattern;
-        }
-      }
+  // set the dependencies of the star pattern
+  for (const starPatternWithDependencies of innerQuery.values()) {
+    for (const tripleWithDependencies of starPatternWithDependencies.starPattern.values()) {
+      addADependencyToStarPattern(tripleWithDependencies, innerQuery);
     }
-
   }
-
-
   return resp;
+}
+
+
+function addADependencyToStarPattern(tripleWithDependencies: ITripleWithDependencies, innerQuery: Map<string, IStarPatternWithDependencies>): void {
+  const linkedSubjectGroup = tripleWithDependencies.triple.getLinkedStarPattern();
+  if (linkedSubjectGroup !== undefined) {
+    const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
+    if (dependenStarPattern !== undefined) {
+      tripleWithDependencies.dependencies = dependenStarPattern
+    }
+  }
+}
+
+function addADependencyToOneOf(oneOf: IOneOf, innerQuery: Map<string, IStarPatternWithDependencies>): void {
+  const triple = oneOf.options[0].triple;
+  const linkedStarPatternName = triple.getLinkedStarPattern();
+  if (linkedStarPatternName !== undefined) {
+    const dependenStarPattern = innerQuery.get(linkedStarPatternName);
+    if (dependenStarPattern !== undefined) {
+      oneOf.dependencies = dependenStarPattern;
+    }
+  }
 }

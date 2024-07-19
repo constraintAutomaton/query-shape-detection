@@ -53,27 +53,41 @@ export interface ITripleArgs {
   object: Term | Term[];
   isOptional?: boolean;
   cardinality?: ICardinality;
+  negatedSet?: Set<string>;
 }
 /**
  * A Triple
  */
 export class Triple implements ITriple {
+
+  /**
+ * Indicate that the predicate can be anything.
+ * It is used for the "NegatedPropertySet" 
+ * https://www.w3.org/TR/sparql11-query/#propertypaths
+ * 
+ * The negatedSet property must be checked for any analysis
+ */
+  public static readonly PREDICATE_SET = "*";
   public readonly predicate: string;
   public readonly subject: string;
   public readonly object: Term | Term[];
   // the cardinality of the predicate
   public readonly cardinality: ICardinality;
+  public readonly negatedSet?: Set<string>;
 
   /**
    *
    * @param {ITripleArgs} tripleObject - A triple object
    */
-  public constructor({ subject, predicate, object, cardinality }: ITripleArgs) {
+  public constructor({ subject, predicate, object, cardinality, negatedSet: negative }: ITripleArgs) {
     this.predicate = predicate;
     this.object = object;
     this.subject = subject;
     this.cardinality = cardinality ?? { min: 1, max: 1 };
+    this.negatedSet = negative;
 
+    Object.freeze(this.negatedSet);
+    Object.freeze(this.cardinality);
     Object.freeze(this.predicate);
     Object.freeze(this.object);
     Object.freeze(this.subject);
