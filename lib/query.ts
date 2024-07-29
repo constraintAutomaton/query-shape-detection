@@ -4,7 +4,7 @@ import { ITripleWithDependencies, Triple, IOneOf, type IStarPatternWithDependenc
 
 type OneOfRawData = Map<string, { oneOfs: IOneOf[], isVariable: boolean }>;
 
-interface AccumulatedTriples { triples: Map<string, ITriple>, isVariable: boolean }
+interface IAccumulatedTriples { triples: Map<string, ITriple>, isVariable: boolean }
 /**
  * A query divided into subject group
  */
@@ -22,7 +22,7 @@ export interface IQuery {
  * @todo add support for optional property path
  */
 export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
-  const resp = new Map<string, AccumulatedTriples>();
+  const resp = new Map<string, IAccumulatedTriples>();
   const oneOfs: OneOfRawData = new Map();
   // the binding value to the value
   const values = new Map<string, Term[]>();
@@ -91,7 +91,7 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
 }
 
 function mergeTriples(
-  tripleArgs: Map<string, AccumulatedTriples>,
+  tripleArgs: Map<string, IAccumulatedTriples>,
   values: Map<string, Term[]>,
   oneOfs: OneOfRawData
 ): IQuery {
@@ -246,7 +246,7 @@ function handleNegatedPropertySet(element: any): { triple: ITriple, isVariable: 
   };
 }
 
-function handleDirectPropertyPath(element: any, resp: Map<string, AccumulatedTriples>, triple: { triple: ITriple, isVariable: boolean } | undefined) {
+function handleDirectPropertyPath(element: any, resp: Map<string, IAccumulatedTriples>, triple: { triple: ITriple, isVariable: boolean } | undefined) {
   const subject = element.subject as Term;
   const startPattern = resp.get(subject.value);
   if (triple !== undefined) {
