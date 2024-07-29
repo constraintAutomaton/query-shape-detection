@@ -221,7 +221,6 @@ function joinTriplesWithProperties(
     });
 
     // set the dependencies of the oneOf
-    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < oneOfs.get(starPatternSubject)!.oneOfs.length; i++) {
       const oneOf = oneOfs.get(starPatternSubject)!.oneOfs[i];
       addADependencyToOneOf(oneOf, innerQuery);
