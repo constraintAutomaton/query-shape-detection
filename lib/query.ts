@@ -27,7 +27,7 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   // the binding value to the value
   const values = new Map<string, Term[]>();
 
-  const addProperty = (quad: any): boolean => {
+  const addBgp = (quad: any): boolean => {
     const subject = quad.subject as Term;
     const predicate = quad.predicate as Term;
     const object = quad.object as Term;
@@ -47,7 +47,6 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     return true;
   };
 
-
   const addValues = (element: any): boolean => {
     const bindings: Record<string, Term>[] = element.bindings;
     for (const binding of bindings) {
@@ -64,7 +63,7 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     return true;
   }
 
-  const handlePath = (element: any): boolean => {
+  const addPropertyPath = (element: any): boolean => {
     const path = element.predicate.type;
     if (path === Algebra.types.ALT) {
       handleAltPropertyPath(element, oneOfs);
@@ -81,9 +80,9 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   Util.recurseOperation(
     algebraQuery,
     {
-      [Algebra.types.PATTERN]: addProperty,
+      [Algebra.types.PATTERN]: addBgp,
       [Algebra.types.VALUES]: addValues,
-      [Algebra.types.PATH]: handlePath
+      [Algebra.types.PATH]: addPropertyPath
     },
   );
 
