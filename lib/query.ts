@@ -1,92 +1,10 @@
 import type { Term } from '@rdfjs/types';
 import { Algebra, Util } from 'sparqlalgebrajs';
-import { ITripleArgs, ITripleWithDependencies, Triple, IOneOf, type IStarPatternWithDependencies } from './Triple';
+import { ITripleWithDependencies, Triple, IOneOf, type IStarPatternWithDependencies, ITriple } from './Triple';
 
 type OneOfRawData = Map<string, { oneOfs: IOneOf[], isVariable: boolean }>;
 
-function handleAltPropertyPath(element: any, oneOfs: OneOfRawData) {
-  const subject = element.subject as Term;
-  const object = element.object as Term;
-  const predicates = element.predicate.input;
-  let currentOneOf = oneOfs.get(subject.value);
-  if (!currentOneOf) {
-    oneOfs.set(subject.value,
-      {
-        oneOfs: [],
-        isVariable: subject.termType === "Variable",
-      }
-    );
-    currentOneOf = oneOfs.get(subject.value)!;
-  }
-  currentOneOf.oneOfs.push({ options: [] });
-  for (const predicate of predicates) {
-    currentOneOf.oneOfs.at(-1)!.options.push({ triple: new Triple({ subject: subject.value, predicate: predicate.iri.value, object }) })
-  }
-}
-
-function handleCardinalityPropertyPath(element: any): { triple: ITripleArgs, isVariable: boolean } | undefined {
-  const subject = element.subject as Term;
-  const object = element.object as Term;
-  const predicate = element.predicate.path.iri;
-  const predicateCardinality = element.predicate.type;
-  let cardinality = undefined;
-  switch (predicateCardinality) {
-    case Algebra.types.ZERO_OR_MORE_PATH:
-      cardinality = { min: 0, max: -1 }
-      break;
-    case Algebra.types.ZERO_OR_ONE_PATH:
-      cardinality = { min: 0, max: 1 };
-      break;
-    case Algebra.types.ONE_OR_MORE_PATH:
-      cardinality = { min: 1, max: -1 };
-      break;
-  }
-  if (cardinality) {
-    return {
-      triple: { subject: subject.value, predicate: predicate.value, object: object, cardinality },
-      isVariable: subject.termType === "Variable"
-    };
-  }
-}
-
-function handleNegatedPropertySet(element: any): { triple: ITripleArgs, isVariable: boolean } | undefined {
-  const subject = element.subject as Term;
-  const object = element.object as Term;
-  const predicates = element.predicate.iris;
-  const negatedSet = new Set<string>();
-  for (const predicate of predicates) {
-    negatedSet.add(predicate.value);
-  }
-
-  return {
-    triple: {
-      subject: subject.value,
-      predicate: Triple.NEGATIVE_PREDICATE_SET,
-      object: object,
-      negatedSet: negatedSet
-    },
-    isVariable: subject.termType === "Variable"
-  };
-}
-
-function handleDirectPropertyPath(element: any, resp: Map<string, { triples: ITripleArgs[], isVariable: boolean }>, triple: { triple: ITripleArgs, isVariable: boolean } | undefined) {
-  const subject = element.subject as Term;
-  const startPattern = resp.get(subject.value);
-  if (triple !== undefined) {
-    if (startPattern === undefined) {
-      resp.set(subject.value, { triples: [triple.triple], isVariable: triple.isVariable });
-    } else {
-      startPattern.triples.push(triple.triple);
-    }
-  }
-}
-
-function isACardinalityPropertyPath(predicateType: string): boolean {
-  return predicateType === Algebra.types.ZERO_OR_MORE_PATH ||
-    predicateType === Algebra.types.ZERO_OR_ONE_PATH ||
-    predicateType === Algebra.types.ONE_OR_MORE_PATH;
-}
-
+interface AccumulatedTriples { triples: Map<string, ITriple>, isVariable: boolean }
 /**
  * A query divided into subject group
  */
@@ -104,7 +22,7 @@ export interface IQuery {
  * @todo add support for optional property path
  */
 export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
-  const resp = new Map<string, { triples: ITripleArgs[], isVariable: boolean }>();
+  const resp = new Map<string, AccumulatedTriples>();
   const oneOfs: OneOfRawData = new Map();
   // the binding value to the value
   const values = new Map<string, Term[]>();
@@ -115,15 +33,15 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     const object = quad.object as Term;
     if (predicate.termType === 'NamedNode') {
       const startPattern = resp.get(subject.value);
-      const propertyObject: ITripleArgs = {
+      const triple: ITriple = new Triple({
         subject: subject.value,
         predicate: quad.predicate.value,
         object,
-      };
+      });
       if (startPattern === undefined) {
-        resp.set(subject.value, { triples: [propertyObject], isVariable: subject.termType === "Variable" });
+        resp.set(subject.value, { triples: new Map([[triple.toString(), triple]]), isVariable: subject.termType === "Variable" });
       } else {
-        startPattern.triples.push(propertyObject);
+        startPattern.triples.set(triple.toString(), triple);
       }
     }
     return true;
@@ -173,7 +91,7 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
 }
 
 function joinTriplesWithProperties(
-  tripleArgs: Map<string, { triples: ITripleArgs[], isVariable: boolean }>,
+  tripleArgs: Map<string, AccumulatedTriples>,
   values: Map<string, Term[]>,
   oneOfs: OneOfRawData
 ): IQuery {
@@ -183,13 +101,17 @@ function joinTriplesWithProperties(
 
   // generate the root star patterns
   for (const [starPatternSubject, { triples, isVariable }] of tripleArgs) {
-    for (const tripleArg of triples) {
-      let triple = new Triple(tripleArg);
-      if (!Array.isArray(tripleArg.object) && tripleArg.object?.termType === "Variable") {
-        const value = values.get(tripleArg.object.value);
+    for (let triple of triples.values()) {
+      if (!Array.isArray(triple.object) && triple.object?.termType === "Variable") {
+        const value = values.get(triple.object.value);
         if (value !== undefined) {
-          tripleArg.object = value;
-          triple = new Triple(tripleArg);
+          triple = new Triple({
+            subject: triple.subject,
+            predicate: triple.predicate,
+            object:value,
+            cardinality:triple.cardinality,
+            negatedSet:triple.negatedSet
+          });
         }
       }
       const starPattern = innerQuery.get(starPatternSubject);
@@ -221,6 +143,7 @@ function joinTriplesWithProperties(
     });
 
     // set the dependencies of the oneOf
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < oneOfs.get(starPatternSubject)!.oneOfs.length; i++) {
       const oneOf = oneOfs.get(starPatternSubject)!.oneOfs[i];
       addADependencyToOneOf(oneOf, innerQuery);
@@ -256,4 +179,88 @@ function addADependencyToOneOf(oneOf: IOneOf, innerQuery: Map<string, IStarPatte
       oneOf.dependencies = dependenStarPattern;
     }
   }
+}
+
+function handleAltPropertyPath(element: any, oneOfs: OneOfRawData) {
+  const subject = element.subject as Term;
+  const object = element.object as Term;
+  const predicates = element.predicate.input;
+  let currentOneOf = oneOfs.get(subject.value);
+  if (!currentOneOf) {
+    oneOfs.set(subject.value,
+      {
+        oneOfs: [],
+        isVariable: subject.termType === "Variable",
+      }
+    );
+    currentOneOf = oneOfs.get(subject.value)!;
+  }
+  currentOneOf.oneOfs.push({ options: [] });
+  for (const predicate of predicates) {
+    currentOneOf.oneOfs.at(-1)!.options.push({ triple: new Triple({ subject: subject.value, predicate: predicate.iri.value, object }) })
+  }
+}
+
+function handleCardinalityPropertyPath(element: any): { triple: ITriple, isVariable: boolean } | undefined {
+  const subject = element.subject as Term;
+  const object = element.object as Term;
+  const predicate = element.predicate.path.iri;
+  const predicateCardinality = element.predicate.type;
+  let cardinality = undefined;
+  switch (predicateCardinality) {
+    case Algebra.types.ZERO_OR_MORE_PATH:
+      cardinality = { min: 0, max: -1 }
+      break;
+    case Algebra.types.ZERO_OR_ONE_PATH:
+      cardinality = { min: 0, max: 1 };
+      break;
+    case Algebra.types.ONE_OR_MORE_PATH:
+      cardinality = { min: 1, max: -1 };
+      break;
+  }
+  if (cardinality) {
+    return {
+      triple: new Triple({ subject: subject.value, predicate: predicate.value, object: object, cardinality }),
+      isVariable: subject.termType === "Variable"
+    };
+  }
+}
+
+function handleNegatedPropertySet(element: any): { triple: ITriple, isVariable: boolean } | undefined {
+  const subject = element.subject as Term;
+  const object = element.object as Term;
+  const predicates = element.predicate.iris;
+  const negatedSet = new Set<string>();
+  for (const predicate of predicates) {
+    negatedSet.add(predicate.value);
+  }
+
+  return {
+    triple: new Triple( {
+      subject: subject.value,
+      predicate: Triple.NEGATIVE_PREDICATE_SET,
+      object: object,
+      negatedSet: negatedSet
+    }),
+    isVariable: subject.termType === "Variable"
+  };
+}
+
+function handleDirectPropertyPath(element: any, resp: Map<string, AccumulatedTriples>, triple: { triple: ITriple, isVariable: boolean } | undefined) {
+  const subject = element.subject as Term;
+  const startPattern = resp.get(subject.value);
+  if (triple !== undefined) {
+    if (startPattern === undefined) {
+      resp.set(subject.value, { isVariable: triple.isVariable, triples: new Map([[triple.triple.toString(), triple.triple]]) });
+
+    } else {
+      startPattern.triples.set(triple.triple.toString(), triple.triple);
+    }
+  }
+}
+
+function isACardinalityPropertyPath(predicateType: string): boolean {
+  return predicateType === Algebra.types.ZERO_OR_MORE_PATH ||
+    predicateType === Algebra.types.ZERO_OR_ONE_PATH ||
+    predicateType === Algebra.types.ONE_OR_MORE_PATH;
 }

@@ -113,7 +113,12 @@ export class Triple implements ITriple {
   }
 
   public toString(): string {
-    return `<${this.subject}> <${this.predicate}> <${JSON.stringify(this.object)}>`;
+    return !this.negatedSet
+      ?
+      `<${this.subject}> <${this.predicate}> <${JSON.stringify(this.object)}>`
+      :
+      `<${this.subject}> NEGATE(<${Array.from(this.negatedSet).join(' ')}>) <${JSON.stringify(this.object)}>`
+      ;
   }
 
 }
