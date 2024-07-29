@@ -1031,7 +1031,136 @@ describe('query', () => {
           }
         });
       });
-      
+
+      describe("negated property path", () => {
+        it("should handle a single negation", () => {
+          const query = `
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX snvoc: <http://exemple.be#>
+
+
+            SELECT
+                *
+            WHERE
+            {
+                ?message !snvoc:replyOf ?person;
+            }`;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  Triple.NEGATIVE_PREDICATE_SET,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate:Triple.NEGATIVE_PREDICATE_SET ,
+                      object: DF.variable('person'),
+                      negatedSet:new Set(["http://exemple.be#replyOf"])
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+              oneOfs: []
+            }
+          ];
+
+
+          const expectedStarPattern = new Map<string, any>([
+            messageStarPattern,
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+        });
+
+        it("should handle a group negation", () => {
+          const query = `
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX snvoc: <http://exemple.be#>
+
+
+            SELECT
+                *
+            WHERE
+            {
+                ?message !(snvoc:foo|snvoc:bar|snvoc:boo) ?originalPostInner.
+                ?originalPostInner a snvoc:Post .
+            }`;
+
+            const originalPostInnerPattern: [string, IStarPatternWithDependencies] = [
+              'originalPostInner',
+              {
+                starPattern: new Map([
+                  [
+                    RDF_TYPE,
+                    {
+                      triple: new Triple({
+                        subject: 'originalPostInner',
+                        predicate: RDF_TYPE,
+                        object: DF.namedNode('http://exemple.be#Post')
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "originalPostInner",
+                isVariable: true,
+                oneOfs: []
+              }
+            ];
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  Triple.NEGATIVE_PREDICATE_SET,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate:Triple.NEGATIVE_PREDICATE_SET ,
+                      object: DF.variable('originalPostInner'),
+                      negatedSet:new Set([
+                        "http://exemple.be#foo",
+                        "http://exemple.be#bar",
+                        "http://exemple.be#boo"
+                      ])
+                    }),
+                    dependencies: originalPostInnerPattern[1]
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+              oneOfs: []
+            }
+          ];
+
+
+          const expectedStarPattern = new Map<string, any>([
+            messageStarPattern,
+            originalPostInnerPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+        });
+      });
+
     });
 
     describe("solidbench query", () => {

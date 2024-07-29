@@ -61,7 +61,7 @@ function handleNegatedPropertySet(element: any): { triple: ITripleArgs, isVariab
   return {
     triple: {
       subject: subject.value,
-      predicate: Triple.PREDICATE_SET,
+      predicate: Triple.NEGATIVE_PREDICATE_SET,
       object: object,
       negatedSet: negatedSet
     },

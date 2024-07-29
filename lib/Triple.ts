@@ -67,7 +67,7 @@ export class Triple implements ITriple {
  * 
  * The negatedSet property must be checked for any analysis
  */
-  public static readonly PREDICATE_SET = "*";
+  public static readonly NEGATIVE_PREDICATE_SET = "*";
   public readonly predicate: string;
   public readonly subject: string;
   public readonly object: Term | Term[];
