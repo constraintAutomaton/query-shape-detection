@@ -87,10 +87,10 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
     },
   );
 
-  return joinTriplesWithProperties(resp, values, oneOfs);
+  return mergeTriples(resp, values, oneOfs);
 }
 
-function joinTriplesWithProperties(
+function mergeTriples(
   tripleArgs: Map<string, AccumulatedTriples>,
   values: Map<string, Term[]>,
   oneOfs: OneOfRawData
