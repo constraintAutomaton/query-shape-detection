@@ -22,71 +22,22 @@ export interface IQuery {
  * @todo add support for optional property path
  */
 export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
-  const resp = new Map<string, IAccumulatedTriples>();
-  const oneOfs: OneOfRawData = new Map();
+  const accumulatedTriples = new Map<string, IAccumulatedTriples>();
+  const accumulatedOneOfs: OneOfRawData = new Map();
   // the binding value to the value
-  const values = new Map<string, Term[]>();
-
-  const addBgp = (quad: any): boolean => {
-    const subject = quad.subject as Term;
-    const predicate = quad.predicate as Term;
-    const object = quad.object as Term;
-    if (predicate.termType === 'NamedNode') {
-      const startPattern = resp.get(subject.value);
-      const triple: ITriple = new Triple({
-        subject: subject.value,
-        predicate: quad.predicate.value,
-        object,
-      });
-      if (startPattern === undefined) {
-        resp.set(subject.value, { triples: new Map([[triple.toString(), triple]]), isVariable: subject.termType === "Variable" });
-      } else {
-        startPattern.triples.set(triple.toString(), triple);
-      }
-    }
-    return true;
-  };
-
-  const addValues = (element: any): boolean => {
-    const bindings: Record<string, Term>[] = element.bindings;
-    for (const binding of bindings) {
-      for (const [key, term] of Object.entries(binding)) {
-        const variableName = key.substring(1);
-        const value = values.get(variableName);
-        if (value !== undefined) {
-          value.push(term);
-        } else {
-          values.set(variableName, [term]);
-        }
-      }
-    }
-    return true;
-  }
-
-  const addPropertyPath = (element: any): boolean => {
-    const path = element.predicate.type;
-    if (path === Algebra.types.ALT) {
-      handleAltPropertyPath(element, oneOfs);
-    } else if (isACardinalityPropertyPath(path)) {
-      const triple = handleCardinalityPropertyPath(element);
-      handleDirectPropertyPath(element, resp, triple);
-    } else if (path === Algebra.types.NPS) {
-      const triple = handleNegatedPropertySet(element);
-      handleDirectPropertyPath(element, resp, triple);
-    }
-    return true;
-  };
+  const accumatedValues = new Map<string, Term[]>();
 
   Util.recurseOperation(
     algebraQuery,
     {
-      [Algebra.types.PATTERN]: addBgp,
-      [Algebra.types.VALUES]: addValues,
-      [Algebra.types.PATH]: addPropertyPath
+      [Algebra.types.PATTERN]: handleBgp(accumulatedTriples),
+      [Algebra.types.VALUES]: handleValues(accumatedValues),
+      [Algebra.types.PATH]: handlePropertyPath(accumulatedTriples, accumulatedOneOfs),
+      [Algebra.types.UNION]: handleUnion(accumulatedTriples, accumulatedOneOfs, accumatedValues)
     },
   );
 
-  return mergeTriples(resp, values, oneOfs);
+  return mergeTriples(accumulatedTriples, accumatedValues, accumulatedOneOfs);
 }
 
 function mergeTriples(
@@ -107,9 +58,9 @@ function mergeTriples(
           triple = new Triple({
             subject: triple.subject,
             predicate: triple.predicate,
-            object:value,
-            cardinality:triple.cardinality,
-            negatedSet:triple.negatedSet
+            object: value,
+            cardinality: triple.cardinality,
+            negatedSet: triple.negatedSet
           });
         }
       }
@@ -158,6 +109,67 @@ function mergeTriples(
   return resp;
 }
 
+function handleUnion(accumulatedTriples: Map<string, IAccumulatedTriples>, accumulatedOneOfs: OneOfRawData, accumatedValues: Map<string, Term[]>): (element: any) => boolean {
+  return (element: any): boolean => {
+    return true;
+  };
+}
+
+function handleValues(accumatedValues: Map<string, Term[]>): (element: any) => boolean {
+  return (element: any): boolean => {
+    const bindings: Record<string, Term>[] = element.bindings;
+    for (const binding of bindings) {
+      for (const [key, term] of Object.entries(binding)) {
+        const variableName = key.substring(1);
+        const value = accumatedValues.get(variableName);
+        if (value !== undefined) {
+          value.push(term);
+        } else {
+          accumatedValues.set(variableName, [term]);
+        }
+      }
+    }
+    return true;
+  }
+}
+
+function handleBgp(accumulatedTriples: Map<string, IAccumulatedTriples>): (element: any) => boolean {
+  return (quad: any): boolean => {
+    const subject = quad.subject as Term;
+    const predicate = quad.predicate as Term;
+    const object = quad.object as Term;
+    if (predicate.termType === 'NamedNode') {
+      const startPattern = accumulatedTriples.get(subject.value);
+      const triple: ITriple = new Triple({
+        subject: subject.value,
+        predicate: quad.predicate.value,
+        object,
+      });
+      if (startPattern === undefined) {
+        accumulatedTriples.set(subject.value, { triples: new Map([[triple.toString(), triple]]), isVariable: subject.termType === "Variable" });
+      } else {
+        startPattern.triples.set(triple.toString(), triple);
+      }
+    }
+    return true;
+  };
+}
+
+function handlePropertyPath(accumulatedTriples: Map<string, IAccumulatedTriples>, accumulatedOneOfs: OneOfRawData): (element: any) => boolean {
+  return (element: any): boolean => {
+    const path = element.predicate.type;
+    if (path === Algebra.types.ALT) {
+      handleAltPropertyPath(element, accumulatedOneOfs);
+    } else if (isACardinalityPropertyPath(path)) {
+      const triple = handleCardinalityPropertyPath(element);
+      handleDirectPropertyPath(element, accumulatedTriples, triple);
+    } else if (path === Algebra.types.NPS) {
+      const triple = handleNegatedPropertySet(element);
+      handleDirectPropertyPath(element, accumulatedTriples, triple);
+    }
+    return true;
+  };
+}
 
 function addADependencyToStarPattern(tripleWithDependencies: ITripleWithDependencies, innerQuery: Map<string, IStarPatternWithDependencies>): void {
   const linkedSubjectGroup = tripleWithDependencies.triple.getLinkedStarPattern();
@@ -235,7 +247,7 @@ function handleNegatedPropertySet(element: any): { triple: ITriple, isVariable: 
   }
 
   return {
-    triple: new Triple( {
+    triple: new Triple({
       subject: subject.value,
       predicate: Triple.NEGATIVE_PREDICATE_SET,
       object: object,
