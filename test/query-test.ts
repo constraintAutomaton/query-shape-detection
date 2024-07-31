@@ -1290,16 +1290,17 @@ describe('query', () => {
 
         const resp = generateQuery(translate(query));
 
-        expect(resp.union?.length).toBe(2);
+        expect(resp.union?.length).toBe(1);
 
         expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
         expect(resp.filterExpression).toBe('');
         for (const [subject, starPatterns] of resp.starPatterns) {
           expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
         }
-        const n = (resp.union ?? []).length
+        const n = (resp.union ?? []).length;
+        const respUnion = resp.union![0];
         for (let i = 0; i < n; i++) {
-          const union = resp.union![i];
+          const union = respUnion[i];
           const expectedUnionStarPattern = everyExpectedStarPatternUnion[i];
 
           expect(union.starPatterns.size).toBe(expectedUnionStarPattern.size);
@@ -1437,7 +1438,7 @@ describe('query', () => {
 
         const resp = generateQuery(translate(query));
 
-        expect(resp.union?.length).toBe(2);
+        expect(resp.union?.length).toBe(1);
 
         expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
         expect(resp.filterExpression).toBe('');
@@ -1445,8 +1446,9 @@ describe('query', () => {
           expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
         }
         const n = (resp.union ?? []).length
+        const respUnion = resp.union![0];
         for (let i = 0; i < n; i++) {
-          const union = resp.union![i];
+          const union = respUnion[i];
           const expectedUnionStarPattern = everyExpectedStarPatternUnion[i];
 
           expect(union.starPatterns.size).toBe(expectedUnionStarPattern.size);

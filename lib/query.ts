@@ -11,7 +11,7 @@ interface IAccumulatedTriples { triples: Map<string, ITriple>, isVariable: boole
 export interface IQuery {
   // star patterns indexed by subject
   starPatterns: Map<string, IStarPatternWithDependencies>;
-  union?: IQuery[];
+  union?: IQuery[][];
   filterExpression?: string;
 }
 
@@ -27,7 +27,7 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   const accumulatedOneOfs: OneOfRawData = new Map();
   // the binding value to the value
   const accumatedValues = new Map<string, Term[]>();
-  const accumulatedUnion: IQuery[] = [];
+  const accumulatedUnion: IQuery[][] = [];
 
   Util.recurseOperation(
     algebraQuery,
@@ -46,7 +46,7 @@ function buildQuery(
   tripleArgs: Map<string, IAccumulatedTriples>,
   values: Map<string, Term[]>,
   oneOfs: OneOfRawData,
-  accumulatedUnion: IQuery[]
+  accumulatedUnion: IQuery[][]
 ): IQuery {
   const innerQuery = new Map<string, IStarPatternWithDependencies>();
   const resp: IQuery = { starPatterns: innerQuery, filterExpression: "" };
@@ -115,12 +115,14 @@ function buildQuery(
   return resp;
 }
 
-function handleUnion(accumulatedUnion: IQuery[]): (element: any) => boolean {
+function handleUnion(accumulatedUnion: IQuery[][]): (element: any) => boolean {
   return (element: any): boolean => {
     const branches: any[] = element.input;
+    const currentUnion:IQuery[] = [];
     for (const branch of branches) {
-      accumulatedUnion.push(generateQuery(branch));
+      currentUnion.push(generateQuery(branch))
     }
+    accumulatedUnion.push(currentUnion);
     return false;
   };
 }
