@@ -11,6 +11,7 @@ interface IAccumulatedTriples { triples: Map<string, ITriple>, isVariable: boole
 export interface IQuery {
   // star patterns indexed by subject
   starPatterns: Map<string, IStarPatternWithDependencies>;
+  union?: IQuery[];
   filterExpression?: string;
 }
 
@@ -26,27 +27,32 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   const accumulatedOneOfs: OneOfRawData = new Map();
   // the binding value to the value
   const accumatedValues = new Map<string, Term[]>();
+  const accumulatedUnion: IQuery[] = [];
 
   Util.recurseOperation(
     algebraQuery,
     {
-      [Algebra.types.PATTERN]: handleBgp(accumulatedTriples),
+      [Algebra.types.PATTERN]: handlePattern(accumulatedTriples),
       [Algebra.types.VALUES]: handleValues(accumatedValues),
       [Algebra.types.PATH]: handlePropertyPath(accumulatedTriples, accumulatedOneOfs),
-      [Algebra.types.UNION]: handleUnion(accumulatedTriples, accumulatedOneOfs, accumatedValues)
+      [Algebra.types.UNION]: handleUnion(accumulatedUnion)
     },
   );
 
-  return mergeTriples(accumulatedTriples, accumatedValues, accumulatedOneOfs);
+  return buildQuery(accumulatedTriples, accumatedValues, accumulatedOneOfs, accumulatedUnion);
 }
 
-function mergeTriples(
+function buildQuery(
   tripleArgs: Map<string, IAccumulatedTriples>,
   values: Map<string, Term[]>,
-  oneOfs: OneOfRawData
+  oneOfs: OneOfRawData,
+  accumulatedUnion: IQuery[]
 ): IQuery {
   const innerQuery = new Map<string, IStarPatternWithDependencies>();
   const resp: IQuery = { starPatterns: innerQuery, filterExpression: "" };
+  if (accumulatedUnion.length > 0) {
+    resp.union = accumulatedUnion;
+  }
   const unHandledOneOf = new Set<string>(oneOfs.keys());
 
   // generate the root star patterns
@@ -109,9 +115,13 @@ function mergeTriples(
   return resp;
 }
 
-function handleUnion(accumulatedTriples: Map<string, IAccumulatedTriples>, accumulatedOneOfs: OneOfRawData, accumatedValues: Map<string, Term[]>): (element: any) => boolean {
+function handleUnion(accumulatedUnion: IQuery[]): (element: any) => boolean {
   return (element: any): boolean => {
-    return true;
+    const branches: any[] = element.input;
+    for (const branch of branches) {
+      accumulatedUnion.push(generateQuery(branch));
+    }
+    return false;
   };
 }
 
@@ -129,11 +139,11 @@ function handleValues(accumatedValues: Map<string, Term[]>): (element: any) => b
         }
       }
     }
-    return true;
+    return false;
   }
 }
 
-function handleBgp(accumulatedTriples: Map<string, IAccumulatedTriples>): (element: any) => boolean {
+function handlePattern(accumulatedTriples: Map<string, IAccumulatedTriples>): (element: any) => boolean {
   return (quad: any): boolean => {
     const subject = quad.subject as Term;
     const predicate = quad.predicate as Term;
@@ -151,7 +161,7 @@ function handleBgp(accumulatedTriples: Map<string, IAccumulatedTriples>): (eleme
         startPattern.triples.set(triple.toString(), triple);
       }
     }
-    return true;
+    return false;
   };
 }
 
@@ -167,29 +177,8 @@ function handlePropertyPath(accumulatedTriples: Map<string, IAccumulatedTriples>
       const triple = handleNegatedPropertySet(element);
       handleDirectPropertyPath(element, accumulatedTriples, triple);
     }
-    return true;
+    return false;
   };
-}
-
-function addADependencyToStarPattern(tripleWithDependencies: ITripleWithDependencies, innerQuery: Map<string, IStarPatternWithDependencies>): void {
-  const linkedSubjectGroup = tripleWithDependencies.triple.getLinkedStarPattern();
-  if (linkedSubjectGroup !== undefined) {
-    const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
-    if (dependenStarPattern !== undefined) {
-      tripleWithDependencies.dependencies = dependenStarPattern
-    }
-  }
-}
-
-function addADependencyToOneOf(oneOf: IOneOf, innerQuery: Map<string, IStarPatternWithDependencies>): void {
-  const triple = oneOf.options[0].triple;
-  const linkedStarPatternName = triple.getLinkedStarPattern();
-  if (linkedStarPatternName !== undefined) {
-    const dependenStarPattern = innerQuery.get(linkedStarPatternName);
-    if (dependenStarPattern !== undefined) {
-      oneOf.dependencies = dependenStarPattern;
-    }
-  }
 }
 
 function handleAltPropertyPath(element: any, oneOfs: OneOfRawData) {
@@ -257,12 +246,12 @@ function handleNegatedPropertySet(element: any): { triple: ITriple, isVariable: 
   };
 }
 
-function handleDirectPropertyPath(element: any, resp: Map<string, IAccumulatedTriples>, triple: { triple: ITriple, isVariable: boolean } | undefined) {
+function handleDirectPropertyPath(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, triple: { triple: ITriple, isVariable: boolean } | undefined) {
   const subject = element.subject as Term;
-  const startPattern = resp.get(subject.value);
+  const startPattern = accumulatedTriples.get(subject.value);
   if (triple !== undefined) {
     if (startPattern === undefined) {
-      resp.set(subject.value, { isVariable: triple.isVariable, triples: new Map([[triple.triple.toString(), triple.triple]]) });
+      accumulatedTriples.set(subject.value, { isVariable: triple.isVariable, triples: new Map([[triple.triple.toString(), triple.triple]]) });
 
     } else {
       startPattern.triples.set(triple.triple.toString(), triple.triple);
@@ -274,4 +263,25 @@ function isACardinalityPropertyPath(predicateType: string): boolean {
   return predicateType === Algebra.types.ZERO_OR_MORE_PATH ||
     predicateType === Algebra.types.ZERO_OR_ONE_PATH ||
     predicateType === Algebra.types.ONE_OR_MORE_PATH;
+}
+
+function addADependencyToStarPattern(tripleWithDependencies: ITripleWithDependencies, innerQuery: Map<string, IStarPatternWithDependencies>): void {
+  const linkedSubjectGroup = tripleWithDependencies.triple.getLinkedStarPattern();
+  if (linkedSubjectGroup !== undefined) {
+    const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
+    if (dependenStarPattern !== undefined) {
+      tripleWithDependencies.dependencies = dependenStarPattern
+    }
+  }
+}
+
+function addADependencyToOneOf(oneOf: IOneOf, innerQuery: Map<string, IStarPatternWithDependencies>): void {
+  const triple = oneOf.options[0].triple;
+  const linkedStarPatternName = triple.getLinkedStarPattern();
+  if (linkedStarPatternName !== undefined) {
+    const dependenStarPattern = innerQuery.get(linkedStarPatternName);
+    if (dependenStarPattern !== undefined) {
+      oneOf.dependencies = dependenStarPattern;
+    }
+  }
 }
