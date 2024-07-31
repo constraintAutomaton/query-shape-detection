@@ -34,6 +34,7 @@
     "lint": "eslint --fix .",
     "build": "rm -r build; npm run build:ts",
     "build:ts": "tsc",
+    "build:watch": "tsc --watch",
     "validate": "npm ls",
     "prepare": "npm run build",
     "version": "manual-git-changelog onversion",
@@ -41,7 +42,7 @@
   },
   "dependencies": {
     "rdf-data-factory": "^1.1.2",
-    "sparqlalgebrajs": "^4.3.0"
+    "sparqlalgebrajs": "^4.3.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.2",
