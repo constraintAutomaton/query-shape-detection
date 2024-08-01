@@ -102,7 +102,7 @@ function buildQuery(
 
 function handlePropertyPath(
   accumulatedTriples: Map<string,
-  IAccumulatedTriples>, accumulatedUnion: IQuery[][],
+    IAccumulatedTriples>, accumulatedUnion: IQuery[][],
   accumatedValues: Map<string, Term[]>
 ): (element: any) => boolean {
   return (element: any): boolean => {
@@ -210,20 +210,32 @@ function handleAltPropertyPath(element: any, accumatedValues: Map<string, Term[]
 }
 
 function handleSeqPath(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term): IQuery {
-  const predicates = element.predicate.input;
+  const predicates = element.input;
   const accumulatedTriples = new Map<string, IAccumulatedTriples>();
   const accumulatedUnion: IQuery[][] = [];
-  let currentSubject: Term = subject;
-  for (const path of predicates) {
+
+  let currentObject: Term = DF.blankNode();
+
+  for (let i = 0; i < predicates.length; i++) {
+    const path = predicates[i];
+    let currentSubject: Term = currentObject;
+    if (i === 0) {
+      currentSubject = subject;
+    }
+    currentObject = DF.blankNode();
+
+    if (i === predicates.length - 1) {
+      currentObject = object;
+    }
+
     const cardinality = getCardinality(path.type);
     if (cardinality !== undefined) {
-      handleLink(path.path, accumulatedTriples, currentSubject, object, cardinality);
+      handleLink(path.path, accumulatedTriples, currentSubject, currentObject, cardinality);
     } else if (path.type === Algebra.types.LINK) {
-      handleLink(path, accumulatedTriples, currentSubject, object);
+      handleLink(path, accumulatedTriples, currentSubject, currentObject);
     } else if (path === Algebra.types.ALT) {
       accumulatedUnion.push(handleAltPropertyPath(path, accumatedValues));
     }
-    currentSubject = DF.blankNode();
   }
 
   return buildQuery(accumulatedTriples, accumatedValues, accumulatedUnion);
@@ -254,6 +266,7 @@ function getCardinality(nodeType: string): ICardinality | undefined {
 }
 
 function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality) {
+  console.log(subject);
   const triple: ITriple = new Triple({
     subject: subject.value,
     predicate: element.iri.value,
