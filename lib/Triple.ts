@@ -10,13 +10,8 @@ export interface IStarPatternWithDependencies {
   filterExpression?: string;
   name: string;
   isVariable: boolean;
-  oneOfs: IOneOf[];
 }
 
-export interface IOneOf {
-  options: ITripleWithDependencies[];
-  dependencies?: IStarPatternWithDependencies;
-}
 
 export interface ITripleWithDependencies {
   triple: ITriple;

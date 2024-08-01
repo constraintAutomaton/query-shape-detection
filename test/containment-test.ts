@@ -502,7 +502,7 @@ describe('solveShapeQueryContainment', () => {
                 ]),
                 name: "x",
                 isVariable: true,
-                oneOfs: []
+                
             };
 
             return starPattern;
@@ -528,7 +528,7 @@ describe('solveShapeQueryContainment', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                oneOfs: []
+                
             };
 
             return starPattern;
@@ -554,7 +554,7 @@ describe('solveShapeQueryContainment', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                oneOfs: []
+                
             };
 
             return starPattern;
