@@ -218,15 +218,9 @@ function handleSeqPath(element: any, accumatedValues: Map<string, Term[]>, subje
 
   for (let i = 0; i < predicates.length; i++) {
     const path = predicates[i];
-    let currentSubject: Term = currentObject;
-    if (i === 0) {
-      currentSubject = subject;
-    }
-    currentObject = DF.blankNode();
+    const currentSubject: Term = i===0?subject:currentObject;
 
-    if (i === predicates.length - 1) {
-      currentObject = object;
-    }
+    currentObject = i === predicates.length - 1?object:DF.blankNode();
 
     const cardinality = getCardinality(path.type);
     if (cardinality !== undefined) {
@@ -266,7 +260,6 @@ function getCardinality(nodeType: string): ICardinality | undefined {
 }
 
 function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality) {
-  console.log(subject);
   const triple: ITriple = new Triple({
     subject: subject.value,
     predicate: element.iri.value,
