@@ -1459,11 +1459,454 @@ describe('query', () => {
           }
         }
       });
+
+      it("should handle a multiple unions", () => {
+        const query = `SELECT * WHERE { 
+          ?x <http://exemple.ca> ?z .
+          {
+            ?x <http://exemple.ca#1> ?z .
+            ?x <http://exemple.ca#2> ?z .
+          }UNION{
+            ?x <http://exemple.ca#1> ?z .
+            ?y <http://exemple.be> ?z .
+          }
+
+          {
+            ?x <http://exemple.ca#1> ?z .
+          }UNION{
+            ?x <http://exemple.ca#1> ?z .
+            ?y <http://exemple.be> ?x .
+          }
+        }`;
+
+        const xStarPattern: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+          xStarPattern,
+        ]);
+
+        const xStarPatternUnion11: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca#1',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#1',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ],
+              [
+                'http://exemple.ca#2',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#2',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const xStarPatternUnion12: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca#1',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#1',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ],
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const yStarPattern: [string, IStarPatternWithDependencies] = ['y',
+          {
+            starPattern: new Map(
+              [
+                ['http://exemple.be',
+                  {
+                    triple: new Triple({
+                      subject: 'y',
+                      predicate: 'http://exemple.be',
+                      object: DF.variable('z')
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]
+            ),
+            name: "y",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+
+        const everyExpectedStarPatternUnion1 = [
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternUnion11,
+
+          ]),
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternUnion12,
+            yStarPattern
+          ])
+        ];
+
+
+        const xStarPatternUnion21: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca#1',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#1',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+
+        const yStarPatternUnion22: [string, IStarPatternWithDependencies] = ['y',
+          {
+            starPattern: new Map(
+              [
+                ['http://exemple.be',
+                  {
+                    triple: new Triple({
+                      subject: 'y',
+                      predicate: 'http://exemple.be',
+                      object: DF.variable('x')
+                    }),
+                    dependencies: xStarPatternUnion12[1]
+                  }
+                ]
+              ]
+            ),
+            name: "y",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+
+        const everyExpectedStarPatternUnion2 = [
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternUnion21,
+
+          ]),
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternUnion12,
+            yStarPatternUnion22
+          ])
+        ];
+
+        const everyExpectedStarPatternUnionPack = [
+          everyExpectedStarPatternUnion1,
+          everyExpectedStarPatternUnion2
+        ]
+
+        const resp = generateQuery(translate(query));
+
+        expect(resp.union?.length).toBe(2);
+
+        expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+        expect(resp.filterExpression).toBe('');
+        for (const [subject, starPatterns] of resp.starPatterns) {
+          expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+        }
+        const n = (resp.union ?? []).length;
+
+        for (let i = 0; i < n; i++) {
+          const respUnion = resp.union![i];
+          const everyExpectedStarPatternUnion= everyExpectedStarPatternUnionPack[i];
+          for (let j = 0; j < respUnion.length; j++) {
+            const union = respUnion[j];
+            const expectedUnionStarPattern = everyExpectedStarPatternUnion[j];
+
+            expect(union.starPatterns.size).toBe(expectedUnionStarPattern.size);
+            expect(union.filterExpression).toBe('');
+            for (const [subject, starPatterns] of union.starPatterns) {
+              const expectedStarPattern = expectedUnionStarPattern.get(subject);
+              expect(starPatterns).toStrictEqual(expectedStarPattern);
+            }
+          }
+        }
+
+      });
+
+      it("should handle nested union", () => {
+        const query = `SELECT * WHERE { 
+          ?x <http://exemple.ca> ?z .
+          {
+            ?x <http://exemple.ca#1> ?z .
+            ?x <http://exemple.ca#2> ?z .
+          }UNION{
+            ?x <http://exemple.ca#1> ?z .
+            ?y <http://exemple.be> ?z .
+            {
+            ?x <http://exemple.ca> ?y .
+            }UNION{
+              ?x <http://exemple.ca> ?w .
+            }
+          }
+        }`;
+
+        const xStarPattern: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+          xStarPattern,
+        ]);
+
+        const xStarPatternUnion: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca#1',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#1',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ],
+              [
+                'http://exemple.ca#2',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#2',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const xStarPatternUnion2: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca#1',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca#1',
+                    object: DF.variable('z')
+                  }),
+                  dependencies: undefined
+                }
+              ],
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const yStarPattern: [string, IStarPatternWithDependencies] = ['y',
+          {
+            starPattern: new Map(
+              [
+                ['http://exemple.be',
+                  {
+                    triple: new Triple({
+                      subject: 'y',
+                      predicate: 'http://exemple.be',
+                      object: DF.variable('z')
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]
+            ),
+            name: "y",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const everyExpectedStarPatternUnion = [
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternUnion,
+
+          ]),
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternUnion2,
+            yStarPattern
+          ])
+        ];
+
+        const xStarPatternNestedUnion1: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca',
+                    object: DF.variable('y')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const xStarPatternNestedUnion2: [string, IStarPatternWithDependencies] = ['x',
+          {
+            starPattern: new Map([
+              [
+                'http://exemple.ca',
+                {
+                  triple: new Triple({
+                    subject: 'x',
+                    predicate: 'http://exemple.ca',
+                    object: DF.variable('w')
+                  }),
+                  dependencies: undefined
+                }
+              ]
+            ]),
+            name: "x",
+            isVariable: true,
+            oneOfs: []
+          }
+        ];
+
+        const everyExpectedStarPatternNestedUnion = [
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternNestedUnion1,
+
+          ]),
+          new Map<string, IStarPatternWithDependencies>([
+            xStarPatternNestedUnion2
+          ])
+        ];
+
+        const resp = generateQuery(translate(query));
+
+        expect(resp.union?.length).toBe(1);
+
+        expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+        expect(resp.filterExpression).toBe('');
+        for (const [subject, starPatterns] of resp.starPatterns) {
+          expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+        }
+        const n = (resp.union ?? []).length;
+        const respUnion = resp.union![0];
+        for (let i = 0; i < n; i++) {
+          const union = respUnion[i];
+          const expectedUnionStarPattern = everyExpectedStarPatternUnion[i];
+
+          expect(union.starPatterns.size).toBe(expectedUnionStarPattern.size);
+          expect(union.filterExpression).toBe('');
+          for (const [subject, starPatterns] of union.starPatterns) {
+            const expectedStarPattern = expectedUnionStarPattern.get(subject);
+            expect(starPatterns).toStrictEqual(expectedStarPattern);
+          }          
+        }
+
+        const nestedUnion = resp.union![0][1].union![0];      
+        expect(nestedUnion).toBeDefined();
+        const nNested = (nestedUnion ?? []).length;
+
+        for (let i = 0; i < nNested; i++) {
+          const union = nestedUnion[i];
+          const expectedUnionStarPattern = everyExpectedStarPatternNestedUnion[i];
+
+          expect(union.starPatterns.size).toBe(expectedUnionStarPattern.size);
+          expect(union.filterExpression).toBe('');
+          for (const [subject, starPatterns] of union.starPatterns) {
+            const expectedStarPattern = expectedUnionStarPattern.get(subject);
+            expect(starPatterns).toStrictEqual(expectedStarPattern);
+          }          
+        }
+
+      });
     });
 
     describe("solidbench query", () => {
 
-      describe("short", ()=>{
+      describe("short", () => {
         test('interactive-short-2', () => {
           const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -1504,7 +1947,7 @@ describe('query', () => {
           }
           LIMIT 10
           `;
-  
+
           const originalPostInnerPattern: [string, IStarPatternWithDependencies] = [
             'originalPostInner',
             {
@@ -1526,7 +1969,7 @@ describe('query', () => {
               oneOfs: []
             }
           ];
-  
+
           const personStarPattern: [string, IStarPatternWithDependencies] = [
             'person',
             {
@@ -1559,7 +2002,7 @@ describe('query', () => {
               oneOfs: []
             }
           ];
-  
+
           const messageStarPattern: [string, IStarPatternWithDependencies] = [
             'message',
             {
@@ -1634,7 +2077,7 @@ describe('query', () => {
               ]
             }
           ];
-  
+
           const creatorStarPattern: [string, IStarPatternWithDependencies] = [
             'creator',
             {
@@ -1675,7 +2118,7 @@ describe('query', () => {
               oneOfs: []
             }
           ];
-  
+
           const originalPostStarPattern: [string, IStarPatternWithDependencies] = [
             'originalPost',
             {
@@ -1707,7 +2150,7 @@ describe('query', () => {
               oneOfs: []
             }
           ];
-  
+
           const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
             originalPostInnerPattern,
             messageStarPattern,
@@ -1715,9 +2158,9 @@ describe('query', () => {
             originalPostStarPattern,
             personStarPattern
           ]);
-  
+
           const resp = generateQuery(translate(query));
-  
+
           expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
           expect(resp.filterExpression).toBe('');
           for (const [subject, starPatterns] of resp.starPatterns) {
@@ -1726,7 +2169,7 @@ describe('query', () => {
         });
       });
 
-      describe("complex", ()=>{
+      describe("complex", () => {
         test('interactive-complex-8', () => {
           const query = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
           PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
@@ -1750,7 +2193,7 @@ describe('query', () => {
           }
           ORDER BY DESC (?commentCreationDate) (?commentId)
           LIMIT 20`;
-  
+
           const meStarPattern: [string, IStarPatternWithDependencies] = [
             'http://localhost:3000/pods/00000002199023256816/profile/card#me',
             {
@@ -1923,16 +2366,16 @@ describe('query', () => {
               oneOfs: []
             }
           ];
-  
+
           const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
             meStarPattern,
             messageStarPattern,
             commentStarPattern,
             personStarPattern
           ]);
-  
+
           const resp = generateQuery(translate(query));
-  
+
           expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
           expect(resp.filterExpression).toBe('');
           for (const [subject, starPatterns] of resp.starPatterns) {

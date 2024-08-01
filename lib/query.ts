@@ -11,7 +11,7 @@ interface IAccumulatedTriples { triples: Map<string, ITriple>, isVariable: boole
 export interface IQuery {
   // star patterns indexed by subject
   starPatterns: Map<string, IStarPatternWithDependencies>;
-  union?: IQuery[][];
+  union?: Array<IQuery[]>;
   filterExpression?: string;
 }
 
@@ -27,7 +27,7 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   const accumulatedOneOfs: OneOfRawData = new Map();
   // the binding value to the value
   const accumatedValues = new Map<string, Term[]>();
-  const accumulatedUnion: IQuery[][] = [];
+  const accumulatedUnion: Array<IQuery[]> = [];
 
   Util.recurseOperation(
     algebraQuery,
