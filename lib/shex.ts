@@ -15,8 +15,8 @@ import {
   SHEX_EACH_OF,
   SHEX_ONE_OF,
 } from './constant';
-import type { IContraint, InconsistentPositiveAndNegativePredicateError, OneOf } from './Shape';
-import { type IShape, Shape, type IPredicate, ContraintType } from './Shape';
+import type { IContraint, InconsistentPositiveAndNegativePredicateError, OneOf, IShape, IPredicate } from './Shape';
+import { Shape, ContraintType } from './Shape';
 
 /**
  * Parse a Shex shape from a set of quads
@@ -328,13 +328,13 @@ function handleEachOf(
 
 function deleteIdenticalBranch(oneOfs: OneOf[]): OneOf[] {
 
-  for (let i=0;i<oneOfs.length;++i) {
+  for (let i = 0; i < oneOfs.length; ++i) {
     const identicalIndex = new Set<number>();
     const indexed = new Set<string>();
-    const oneOf =oneOfs[i];
+    const oneOf = oneOfs[i];
     for (let j = 0; j < oneOf.length; ++j) {
-      const stringElement = JSON.stringify(oneOf[j],(key,value)=>{
-        if(key==="value"){
+      const stringElement = JSON.stringify(oneOf[j], (key, value) => {
+        if (key === "value") {
           return Array.from(value);
         }
         return value
