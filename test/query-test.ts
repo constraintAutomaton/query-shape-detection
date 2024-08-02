@@ -2657,6 +2657,198 @@ describe('query', () => {
     describe("solidbench query", () => {
 
       describe("short", () => {
+
+        test('interactive-short-1', () => {
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?firstName
+              ?lastName
+              ?birthday
+              ?locationIP
+              ?browserUsed
+              ?cityId
+              ?gender
+              ?creationDate
+          WHERE
+          {
+              ?person a snvoc:Person .
+              ?person snvoc:id ?personId .
+              ?person snvoc:firstName ?firstName .
+              ?person snvoc:lastName ?lastName .
+              ?person snvoc:gender ?gender .
+              ?person snvoc:birthday ?birthday .
+              ?person snvoc:creationDate ?creationDate .
+              ?person snvoc:locationIP ?locationIP .
+              ?person snvoc:isLocatedIn ?city .
+              ?city snvoc:id ?cityId .
+              ?person snvoc:browserUsed ?browserUsed .
+          }
+          `;
+
+          const cityStarPattern: [string, IStarPatternWithDependencies] = [
+            'city',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'city',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`cityId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "city",
+              isVariable: true,
+            },
+          ];
+
+          const personStarPattern: [string, IStarPatternWithDependencies] = [
+            'person',
+            {
+              starPattern: new Map([
+                [
+                  RDF_TYPE,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: RDF_TYPE,
+                      object: DF.namedNode(`${SNVOC_PREFIX}Person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable('personId')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}firstName`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}firstName`,
+                      object: DF.variable('firstName')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}lastName`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}lastName`,
+                      object: DF.variable('lastName')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}gender`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}gender`,
+                      object: DF.variable('gender')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}birthday`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}birthday`,
+                      object: DF.variable('birthday')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}creationDate`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}creationDate`,
+                      object: DF.variable('creationDate')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}locationIP`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}locationIP`,
+                      object: DF.variable('locationIP')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}isLocatedIn`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}isLocatedIn`,
+                      object: DF.variable('city')
+                    }),
+                    dependencies: cityStarPattern[1]
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}browserUsed`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}browserUsed`,
+                      object: DF.variable('browserUsed')
+                    }),
+                  }
+                ],
+              ]),
+              name: "person",
+              isVariable: true,
+            }
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            personStarPattern,
+            cityStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+        });
+
         test('interactive-short-2', () => {
           const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -2958,6 +3150,496 @@ describe('query', () => {
               expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
             }
           }
+        });
+
+        test('interactive-short-3', () => {
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?personId
+              ?firstName
+              ?lastName
+              ?friendshipCreationDate
+          WHERE
+          {
+              ?rootPerson a snvoc:Person .
+              ?rootPerson snvoc:id ?rootId .
+              {
+                  ?rootPerson snvoc:knows ?knows .
+                  ?knows snvoc:hasPerson ?person .
+              } UNION {
+                  ?person snvoc:knows ?knows .
+                  ?knows snvoc:hasPerson ?rootPerson .
+              }
+              ?knows snvoc:creationDate ?friendshipCreationDate .
+              ?person snvoc:firstName ?firstName .
+              ?person snvoc:lastName ?lastName .
+              ?person snvoc:id ?personId .
+          }
+          `;
+          
+          const personStarPattern: [string, IStarPatternWithDependencies] = [
+            'person',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable('personId')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}firstName`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}firstName`,
+                      object: DF.variable('firstName')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}lastName`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}lastName`,
+                      object: DF.variable('lastName')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "person",
+              isVariable: true,
+            }
+          ];
+
+          const rootPersonStarPattern: [string, IStarPatternWithDependencies] = [
+            'rootPerson',
+            {
+              starPattern: new Map([
+                [
+                  RDF_TYPE,
+                  {
+                    triple: new Triple({
+                      subject: 'rootPerson',
+                      predicate: RDF_TYPE,
+                      object: DF.namedNode(`${SNVOC_PREFIX}Person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'rootPerson',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable('rootId')
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "rootPerson",
+              isVariable: true,
+            }
+          ];
+
+          const knowStarPattern: [string, IStarPatternWithDependencies] = [
+            'knows',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}creationDate`,
+                  {
+                    triple: new Triple({
+                      subject: 'knows',
+                      predicate: `${SNVOC_PREFIX}creationDate`,
+                      object: DF.variable('friendshipCreationDate')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "knows",
+              isVariable: true,
+            }
+          ];
+
+          const knowUnion1BranchStarPattern: [string, IStarPatternWithDependencies] = [
+            'knows',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasPerson`,
+                  {
+                    triple: new Triple({
+                      subject: 'knows',
+                      predicate: `${SNVOC_PREFIX}hasPerson`,
+                      object: DF.variable('person')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "knows",
+              isVariable: true,
+            }
+          ];
+
+          const rootPersonUnion1BranchStarPattern: [string, IStarPatternWithDependencies] = [
+            'rootPerson',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}knows`,
+                  {
+                    triple: new Triple({
+                      subject: 'rootPerson',
+                      predicate: `${SNVOC_PREFIX}knows`,
+                      object: DF.variable('knows')
+                    }),
+                    dependencies: knowUnion1BranchStarPattern[1]
+                  }
+                ]
+              ]),
+              name: "rootPerson",
+              isVariable: true,
+            }
+          ];
+
+          const knowUnion2BranchStarPattern: [string, IStarPatternWithDependencies] = [
+            'knows',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasPerson`,
+                  {
+                    triple: new Triple({
+                      subject: 'knows',
+                      predicate: `${SNVOC_PREFIX}hasPerson`,
+                      object: DF.variable('rootPerson')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "knows",
+              isVariable: true,
+            }
+          ];
+
+          const personUnion2BranchStarPattern: [string, IStarPatternWithDependencies] = [
+            'person',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}knows`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}knows`,
+                      object: DF.variable('knows')
+                    }),
+                    dependencies: knowUnion2BranchStarPattern[1]
+                  }
+                ]
+              ]),
+              name: "person",
+              isVariable: true,
+            }
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            personStarPattern,
+            rootPersonStarPattern,
+            knowStarPattern
+          ]);
+
+          const expectedBranch1StarPattern = new Map<string, IStarPatternWithDependencies>([
+            rootPersonUnion1BranchStarPattern,
+            knowUnion1BranchStarPattern
+          ]);
+
+          const expectedBranch2StarPattern = new Map<string, IStarPatternWithDependencies>([
+            personUnion2BranchStarPattern,
+            knowUnion2BranchStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeDefined();
+          const unions = resp.union!;
+          expect(unions.length).toBe(1);
+          const union = unions[0];
+          expect(union.length).toBe(2);
+          expect(union[0].starPatterns).toStrictEqual(expectedBranch1StarPattern);
+          expect(union[0].union).toBeUndefined();
+          expect(union[1].starPatterns).toStrictEqual(expectedBranch2StarPattern);
+          expect(union[1].union).toBeUndefined();
+
+        });
+
+        test('interactive-short-4', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?messageCreationDate
+              ?messageContent
+          WHERE
+          {
+              ?message snvoc:id ?messageId .
+              ?message snvoc:creationDate ?messageCreationDate .
+              ?message snvoc:content|snvoc:imageFile ?messageContent .
+          }
+          `;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`messageId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}creationDate`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}creationDate`,
+                      object: DF.variable(`messageCreationDate`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const messageContentStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}content`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}content`,
+                      object: DF.variable(`messageContent`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const messageImageFileStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}imageFile`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}imageFile`,
+                      object: DF.variable(`messageContent`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeDefined();
+          const unions = resp.union!;
+          expect(unions.length).toBe(1);
+          const union = unions[0];
+          expect(union.length).toBe(2);
+          expect(union[0].starPatterns).toStrictEqual(new Map([messageContentStarPattern]));
+          expect(union[0].union).toBeUndefined();
+          expect(union[1].starPatterns).toStrictEqual(new Map([messageImageFileStarPattern]));
+          expect(union[1].union).toBeUndefined();
+        });
+
+        test('interactive-short-5', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?personId
+              ?firstName
+              ?lastName
+          WHERE
+          {
+              ?message snvoc:id ?messageId .
+              ?message snvoc:hasCreator ?creator .
+              ?creator snvoc:id ?personId .
+              ?creator snvoc:firstName ?firstName .
+              ?creator snvoc:lastName ?lastName .
+          }
+          `;
+
+          const creatorStarPattern: [string, IStarPatternWithDependencies] = [
+            'creator',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'creator',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`personId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}firstName`,
+                  {
+                    triple: new Triple({
+                      subject: 'creator',
+                      predicate: `${SNVOC_PREFIX}firstName`,
+                      object: DF.variable(`firstName`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}lastName`,
+                  {
+                    triple: new Triple({
+                      subject: 'creator',
+                      predicate: `${SNVOC_PREFIX}lastName`,
+                      object: DF.variable(`lastName`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "creator",
+              isVariable: true,
+            },
+          ];
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`messageId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`creator`)
+                    }),
+                    dependencies: creatorStarPattern[1]
+                  }
+                ],
+                
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+            creatorStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+
         });
       });
 
