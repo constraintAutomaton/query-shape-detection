@@ -608,7 +608,7 @@ describe.each([
   }
 });
 
-function populateStream(source: string | RDF.Quad[]) {
+function populateStream(source: string | RDF.Quad[]):any {
   let quads;
   if (Array.isArray(source)) {
     quads = source;
@@ -618,7 +618,7 @@ function populateStream(source: string | RDF.Quad[]) {
   return streamifyArray(quads);
 }
 
-function populateArray(source: string | RDF.Quad[]) {
+function populateArray(source: string | RDF.Quad[]):RDF.Quad[] {
   if (Array.isArray(source)) {
     return source;
   }

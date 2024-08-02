@@ -94,7 +94,7 @@ export function solveShapeQueryContainment({ query, shapes }: IContainementArg):
 
 }
 
-function updateStarPatternContainment(starPatternsContainment: Map<ShapeName, IContainmentResult>, bindings: IBindings, starPatternName: StarPatternName, shape: IShape) {
+function updateStarPatternContainment(starPatternsContainment: Map<ShapeName, IContainmentResult>, bindings: IBindings, starPatternName: StarPatternName, shape: IShape):void {
   const prevContainmentResult = starPatternsContainment.get(starPatternName)!;
 
   if (bindings.shouldVisitShape() && bindings.getUnboundedTriple().length > 0 && prevContainmentResult.result !== ContainmentResult.CONTAIN) {

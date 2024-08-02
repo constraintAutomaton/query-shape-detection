@@ -17,6 +17,8 @@
     "strict": true,
     "outDir": "./build",
     "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "index.ts",

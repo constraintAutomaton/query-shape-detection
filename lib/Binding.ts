@@ -70,7 +70,7 @@ export class Bindings implements IBindings {
     }
 
 
-    private calculateBinding(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>) {
+    private calculateBinding(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>):void {
         for (const { triple, dependencies } of starPattern.starPattern.values()) {
             if (!this.closedShape) {
                 this.bindings.set(triple.predicate, triple);
@@ -143,7 +143,7 @@ export class Bindings implements IBindings {
         }
     }
 
-    private fillNestedContainedStarPatternName(starPattern: IStarPatternWithDependencies, cycle: Set<string>, originalName: string, rejectedValues: Set<string>, result: Map<string, string[]>) {
+    private fillNestedContainedStarPatternName(starPattern: IStarPatternWithDependencies, cycle: Set<string>, originalName: string, rejectedValues: Set<string>, result: Map<string, string[]>):void {
         for (const { dependencies } of starPattern.starPattern.values()) {
             if (dependencies !== undefined) {
                 const currentBranch = result.get(starPattern.name);
@@ -252,7 +252,7 @@ export class Bindings implements IBindings {
     }
 
 
-    public isFullyBounded() {
+    public isFullyBounded():boolean {
         return this.fullyBounded;
     }
 
@@ -286,7 +286,7 @@ export class Bindings implements IBindings {
 export class OneOfBinding {
     private readonly paths: OneOfPathIndexed[];
 
-    constructor(paths: OneOfPathIndexed[]) {
+    public constructor(paths: OneOfPathIndexed[]) {
         this.paths = paths;
     }
 

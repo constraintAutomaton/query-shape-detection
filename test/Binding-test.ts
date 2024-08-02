@@ -2762,7 +2762,7 @@ describe('Bindings', () => {
             ]);
         }
 
-        function populateStream(source: string | RDF.Quad[]) {
+        function populateStream(source: string | RDF.Quad[]):any {
             let quads;
             if (Array.isArray(source)) {
                 quads = source;

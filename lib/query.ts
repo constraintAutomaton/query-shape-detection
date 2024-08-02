@@ -211,7 +211,7 @@ namespace QueryHandler {
 
   function handleDirectPropertyPath(element: any,
     accumulatedTriples: Map<string, IAccumulatedTriples>,
-    triple: { triple: ITriple, isVariable: boolean } | undefined) {
+    triple: { triple: ITriple, isVariable: boolean } | undefined):void {
     const subject = element.subject as Term;
     const startPattern = accumulatedTriples.get(subject.value);
     if (triple !== undefined) {
@@ -292,7 +292,7 @@ namespace QueryHandler {
     }
   }
 
-  function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality) {
+  function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality):void {
     const triple: ITriple = new Triple({
       subject: subject.value,
       predicate: element.iri.value,
@@ -313,7 +313,7 @@ namespace QueryHandler {
     return buildQuery(accumulatedTriples, accumatedValues, []);
   }
 
-  function handleNegatedPropertyLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term) {
+  function handleNegatedPropertyLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term):void {
     const predicates = element.iris;
     const negatedSet = new Set<string>();
     for (const predicate of predicates) {
