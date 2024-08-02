@@ -119,7 +119,7 @@ namespace QueryHandler {
     return (element: any): boolean => {
       const path = element.predicate.type;
       if (path === Algebra.types.ALT) {
-        accumulatedUnion.push(handleAltPropertyPath(element, accumatedValues));
+        accumulatedUnion.push(handleAltPropertyPath(element.subject, element.predicate.input, element.object, accumatedValues));
       } else if (isACardinalityPropertyPath(path)) {
         const triple = handleCardinalityPropertyPath(element);
         handleDirectPropertyPath(element, accumulatedTriples, triple);
@@ -211,7 +211,7 @@ namespace QueryHandler {
 
   function handleDirectPropertyPath(element: any,
     accumulatedTriples: Map<string, IAccumulatedTriples>,
-    triple: { triple: ITriple, isVariable: boolean } | undefined):void {
+    triple: { triple: ITriple, isVariable: boolean } | undefined): void {
     const subject = element.subject as Term;
     const startPattern = accumulatedTriples.get(subject.value);
     if (triple !== undefined) {
@@ -230,10 +230,7 @@ namespace QueryHandler {
       predicateType === Algebra.types.ONE_OR_MORE_PATH;
   }
 
-  function handleAltPropertyPath(element: any, accumatedValues: Map<string, Term[]>): IQuery[] {
-    const subject = element.subject as Term;
-    const object = element.object as Term;
-    const predicates = element.predicate.input;
+  function handleAltPropertyPath(subject: Term, predicates: any[], object: Term, accumatedValues: Map<string, Term[]>): IQuery[] {
     const union: IQuery[] = [];
     for (const path of predicates) {
       const cardinality = getCardinality(path.type);
@@ -255,23 +252,20 @@ namespace QueryHandler {
     const accumulatedTriples = new Map<string, IAccumulatedTriples>();
     const accumulatedUnion: IQuery[][] = [];
 
-    let currentObject: Term = DF.blankNode();
+    let currentObject: Term = DF.blankNode(`${predicates[0].iri.value}_${subject.value}`);
 
     for (let i = 0; i < predicates.length; i++) {
       const path = predicates[i];
       const currentSubject: Term = i === 0 ? subject : currentObject;
 
-      currentObject = i === predicates.length - 1 ? object : DF.blankNode();
+      currentObject = i === predicates.length - 1 ? object : DF.blankNode(`${path.iri.value}_${subject.value}`);
 
-      const cardinality = getCardinality(path.type);
-      if (cardinality !== undefined) {
-        handleLink(path.path, accumulatedTriples, currentSubject, currentObject, cardinality);
-      } else if (path.type === Algebra.types.LINK) {
+      if (path.type === Algebra.types.LINK) {
         handleLink(path, accumulatedTriples, currentSubject, currentObject);
       } else if (path.type === Algebra.types.NPS) {
         handleNegatedPropertyLink(path, accumulatedTriples, currentSubject, currentObject)
-      } else if (path === Algebra.types.ALT) {
-        accumulatedUnion.push(handleAltPropertyPath(path, accumatedValues));
+      } else if (path.type === Algebra.types.ALT) {
+        accumulatedUnion.push(handleAltPropertyPath(currentSubject, path.input, currentObject, accumatedValues));
       }
     }
 
@@ -292,7 +286,7 @@ namespace QueryHandler {
     }
   }
 
-  function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality):void {
+  function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality): void {
     const triple: ITriple = new Triple({
       subject: subject.value,
       predicate: element.iri.value,
@@ -313,7 +307,7 @@ namespace QueryHandler {
     return buildQuery(accumulatedTriples, accumatedValues, []);
   }
 
-  function handleNegatedPropertyLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term):void {
+  function handleNegatedPropertyLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term): void {
     const predicates = element.iris;
     const negatedSet = new Set<string>();
     for (const predicate of predicates) {
