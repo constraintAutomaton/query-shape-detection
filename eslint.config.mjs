@@ -7,7 +7,8 @@ export default tseslint.config(
   ...tseslint.configs.stylistic,
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "off"
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-namespace": "off"
     }
   },
   {
