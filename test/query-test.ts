@@ -51,7 +51,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
         const yStarPattern: [string, IStarPatternWithDependencies] = ['y',
@@ -72,7 +72,7 @@ describe('query', () => {
             ),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
         const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
@@ -115,7 +115,7 @@ describe('query', () => {
             ]),
             name: "z",
             isVariable: true,
-            
+
           }
         ];
 
@@ -136,7 +136,7 @@ describe('query', () => {
             ]),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -168,7 +168,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -217,7 +217,7 @@ describe('query', () => {
             ]),
             name: "z",
             isVariable: true,
-            
+
           }
         ];
 
@@ -238,7 +238,7 @@ describe('query', () => {
             ]),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -270,7 +270,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -291,7 +291,7 @@ describe('query', () => {
             ]),
             name: "xo",
             isVariable: true,
-            
+
           }
         ];
 
@@ -312,7 +312,7 @@ describe('query', () => {
             ]),
             name: "yo",
             isVariable: true,
-            
+
           }
         ];
         const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
@@ -373,7 +373,7 @@ describe('query', () => {
             ]),
             name: "z",
             isVariable: true,
-            
+
           }
         ];
 
@@ -394,7 +394,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -412,7 +412,7 @@ describe('query', () => {
             ]),
             name: "w",
             isVariable: true,
-            
+
           }
         ];
         const sujetStarPattern: [string, IStarPatternWithDependencies] = [
@@ -432,7 +432,7 @@ describe('query', () => {
             ]),
             name: "http://sujet.cm",
             isVariable: false,
-            
+
           }
         ];
         const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
@@ -481,7 +481,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
         const yStarPattern: [string, IStarPatternWithDependencies] = [
@@ -502,7 +502,7 @@ describe('query', () => {
             ]),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -520,7 +520,7 @@ describe('query', () => {
         }
       });
     });
-    /** 
+
     describe('query with property path', () => {
       describe('AlternativePaths', () => {
         it("should handle a simple AlternativePath", () => {
@@ -552,19 +552,58 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              oneOfs: [
-                {
-                  options: [
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#content", object: DF.variable('messageContent') })
-                    },
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#imageFile", object: DF.variable('messageContent') })
-                    }
-                  ]
-                }
-              ]
             }
+          ];
+
+          const contentUnionStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#content',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#content',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const imageFileUnionStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#imageFile',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#imageFile',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const expectedUnions = [
+            new Map<string, any>([
+              contentUnionStarPattern,
+            ]),
+            new Map<string, any>([
+              imageFileUnionStarPattern,
+            ]),
           ];
 
           const expectedStarPattern = new Map<string, any>([
@@ -578,6 +617,21 @@ describe('query', () => {
           for (const [subject, starPatterns] of resp.starPatterns) {
             expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
           }
+
+          expect(resp.union).toBeDefined();
+          expect(resp.union?.length).toBe(1);
+
+          const union = resp.union![0];
+          expect(union.length).toBe(2);
+          for (let i = 0; i < union.length; i++) {
+            const unionQuery = union[i];
+            const expectedUnion = expectedUnions[i];
+
+            for (const [subject, starPatterns] of unionQuery.starPatterns) {
+              expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
+            }
+          }
+
         });
 
         it("should handle a star pattern with only a AlternativePath", () => {
@@ -608,36 +662,64 @@ describe('query', () => {
               ]),
               name: "messageContent",
               isVariable: true,
-              
+
             }
           ];
 
-          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+          const unionMessageContentStarPattern: [string, IStarPatternWithDependencies] = [
             'message',
             {
-              starPattern: new Map(),
+              starPattern: new Map([
+                [
+                  'http://exemple.be#content',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#content',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
               name: "message",
               isVariable: true,
-              oneOfs: [
-                {
-                  options: [
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#content", object: DF.variable('messageContent') })
-                    },
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#imageFile", object: DF.variable('messageContent') })
-                    }
-                  ],
-                  dependencies: messageContentStarPattern[1]
-                }
-              ]
+            }
+          ];
+
+          const unionMessageImageFileStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#imageFile',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#imageFile',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
             }
           ];
 
           const expectedStarPattern = new Map<string, any>([
-            messageStarPattern,
             messageContentStarPattern
           ]);
+
+          const expectedUnions = [
+            new Map<string, any>([
+              unionMessageContentStarPattern,
+            ]),
+            new Map<string, any>([
+              unionMessageImageFileStarPattern,
+            ]),
+          ];
 
           const resp = generateQuery(translate(query));
 
@@ -645,6 +727,19 @@ describe('query', () => {
           expect(resp.filterExpression).toBe('');
           for (const [subject, starPatterns] of resp.starPatterns) {
             expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeDefined();
+          expect(resp.union?.length).toBe(1);
+          const union = resp.union![0];
+          expect(union.length).toBe(2);
+          for (let i = 0; i < union.length; i++) {
+            const unionQuery = union[i];
+            const expectedUnion = expectedUnions[i];
+
+            for (const [subject, starPatterns] of unionQuery.starPatterns) {
+              expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
+            }
           }
         });
 
@@ -676,21 +771,69 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              oneOfs: [
-                {
-                  options: [
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#content", object: DF.variable('messageContent') })
-                    },
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#imageFile", object: DF.variable('messageContent') })
-                    },
-                    {
-                      triple: new Triple({ subject: "message", predicate: "http://exemple.be#bar", object: DF.variable('messageContent') })
-                    }
-                  ]
-                }
-              ]
+            }
+          ];
+
+          const unionMessageContentStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#content',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#content',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const unionMessageImageFileStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#imageFile',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#imageFile',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const unionMessageBarStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#bar',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#bar',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
             }
           ];
 
@@ -698,12 +841,37 @@ describe('query', () => {
             messageStarPattern,
           ]);
 
+          const expectedUnions = [
+            new Map<string, any>([
+              unionMessageContentStarPattern,
+            ]),
+            new Map<string, any>([
+              unionMessageImageFileStarPattern,
+            ]),
+            new Map<string, any>([
+              unionMessageBarStarPattern,
+            ]),
+          ];
+
           const resp = generateQuery(translate(query));
 
           expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
           expect(resp.filterExpression).toBe('');
           for (const [subject, starPatterns] of resp.starPatterns) {
             expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeDefined();
+          expect(resp.union?.length).toBe(1);
+          const union = resp.union![0];
+          expect(union.length).toBe(3);
+          for (let i = 0; i < union.length; i++) {
+            const unionQuery = union[i];
+            const expectedUnion = expectedUnions[i];
+
+            for (const [subject, starPatterns] of unionQuery.starPatterns) {
+              expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
+            }
           }
         });
 
@@ -713,7 +881,7 @@ describe('query', () => {
             SELECT
                 *
             WHERE {
-                ?message snvoc:content|snvoc:imageFile|snvoc:bar|snvoc:foo ?messageContent .
+                ?message snvoc:content|snvoc:imageFile|snvoc:bar ?messageContent .
                 ?message snvoc:creationDate ?messageCreationDate .
                 ?message snvoc:content|snvoc:imageFile ?somethingElse .
             } LIMIT 10`;
@@ -736,28 +904,143 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              oneOfs: [
-                {
-                  options: [
-                    { triple: new Triple({ subject: "message", predicate: "http://exemple.be#content", object: DF.variable('messageContent') }) },
-                    { triple: new Triple({ subject: "message", predicate: "http://exemple.be#imageFile", object: DF.variable('messageContent') }) },
-                    { triple: new Triple({ subject: "message", predicate: "http://exemple.be#bar", object: DF.variable('messageContent') }) },
-                    { triple: new Triple({ subject: "message", predicate: "http://exemple.be#foo", object: DF.variable('messageContent') }) },
-                  ]
-                },
-                {
-                  options: [
-                    { triple: new Triple({ subject: "message", predicate: "http://exemple.be#content", object: DF.variable("somethingElse") }) },
-                    { triple: new Triple({ subject: "message", predicate: "http://exemple.be#imageFile", object: DF.variable("somethingElse") }) },
-                  ]
-                }
-              ]
+            }
+          ];
+
+          const unionMessageContentStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#content',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#content',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const unionMessageImageFileStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#imageFile',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#imageFile',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const unionMessageBarStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#bar',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#bar',
+                      object: DF.variable('messageContent')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const union2MessageContentStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#content',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#content',
+                      object: DF.variable('somethingElse')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const union2MessageImageFileStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  'http://exemple.be#imageFile',
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: 'http://exemple.be#imageFile',
+                      object: DF.variable('somethingElse')
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
             }
           ];
 
           const expectedStarPattern = new Map<string, any>([
             messageStarPattern,
           ]);
+
+          const expectedUnions = [
+            new Map<string, any>([
+              unionMessageContentStarPattern,
+            ]),
+            new Map<string, any>([
+              unionMessageImageFileStarPattern,
+            ]),
+            new Map<string, any>([
+              unionMessageBarStarPattern,
+            ]),
+          ];
+
+          const expectedUnions2 = [
+            new Map<string, any>([
+              union2MessageContentStarPattern,
+            ]),
+            new Map<string, any>([
+              union2MessageImageFileStarPattern,
+            ])
+          ];
+
+          const expectedMultipleUnions = [
+            expectedUnions,
+            expectedUnions2
+          ];
 
           const resp = generateQuery(translate(query));
 
@@ -766,8 +1049,25 @@ describe('query', () => {
           for (const [subject, starPatterns] of resp.starPatterns) {
             expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
           }
-        });
 
+          expect(resp.union).toBeDefined();
+          expect(resp.union?.length).toBe(2);
+          for (let i = 0; i < resp.union!.length; i++) {
+            const union = resp.union![i];
+            const expectedUnions = expectedMultipleUnions[i]
+            expect(union.length).toBe(expectedUnions.length);
+
+            for (let j = 0; j < union.length; j++) {
+              const unionQuery = union[j];
+              const expectedUnion = expectedUnions[j];
+
+              for (const [subject, starPatterns] of unionQuery.starPatterns) {
+                expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
+              }
+            }
+          }
+
+        });
       });
 
       describe("cardinality property path", () => {
@@ -804,7 +1104,7 @@ describe('query', () => {
               ]),
               name: "originalPostInner",
               isVariable: true,
-              
+
             }
           ];
 
@@ -839,7 +1139,7 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              
+
             }
           ];
 
@@ -891,7 +1191,7 @@ describe('query', () => {
               ]),
               name: "originalPostInner",
               isVariable: true,
-              
+
             }
           ];
 
@@ -926,7 +1226,7 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              
+
             }
           ];
 
@@ -978,7 +1278,7 @@ describe('query', () => {
               ]),
               name: "originalPostInner",
               isVariable: true,
-              
+
             }
           ];
 
@@ -1013,7 +1313,7 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              
+
             }
           ];
 
@@ -1032,6 +1332,7 @@ describe('query', () => {
           }
         });
       });
+
 
       describe("negated property path", () => {
         it("should handle a single negation", () => {
@@ -1066,7 +1367,7 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              
+
             }
           ];
 
@@ -1116,7 +1417,7 @@ describe('query', () => {
               ]),
               name: "originalPostInner",
               isVariable: true,
-              
+
             }
           ];
           const messageStarPattern: [string, IStarPatternWithDependencies] = [
@@ -1142,7 +1443,7 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              
+
             }
           ];
 
@@ -1162,7 +1463,7 @@ describe('query', () => {
         });
       });
     });
-    */
+
     describe('union', () => {
       it("should handle a simple union", () => {
         const query = `SELECT * WHERE { 
@@ -1193,7 +1494,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1229,7 +1530,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1250,7 +1551,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1272,7 +1573,7 @@ describe('query', () => {
             ),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1341,7 +1642,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1377,7 +1678,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1398,7 +1699,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1420,7 +1721,7 @@ describe('query', () => {
             ),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1496,7 +1797,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1532,7 +1833,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1553,7 +1854,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1575,7 +1876,7 @@ describe('query', () => {
             ),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1609,7 +1910,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1632,7 +1933,7 @@ describe('query', () => {
             ),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1666,7 +1967,7 @@ describe('query', () => {
 
         for (let i = 0; i < n; i++) {
           const respUnion = resp.union![i];
-          const everyExpectedStarPatternUnion= everyExpectedStarPatternUnionPack[i];
+          const everyExpectedStarPatternUnion = everyExpectedStarPatternUnionPack[i];
           for (let j = 0; j < respUnion.length; j++) {
             const union = respUnion[j];
             const expectedUnionStarPattern = everyExpectedStarPatternUnion[j];
@@ -1716,7 +2017,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1752,7 +2053,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1773,7 +2074,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1795,7 +2096,7 @@ describe('query', () => {
             ),
             name: "y",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1827,7 +2128,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1848,7 +2149,7 @@ describe('query', () => {
             ]),
             name: "x",
             isVariable: true,
-            
+
           }
         ];
 
@@ -1882,10 +2183,10 @@ describe('query', () => {
           for (const [subject, starPatterns] of union.starPatterns) {
             const expectedStarPattern = expectedUnionStarPattern.get(subject);
             expect(starPatterns).toStrictEqual(expectedStarPattern);
-          }          
+          }
         }
 
-        const nestedUnion = resp.union![0][1].union![0];      
+        const nestedUnion = resp.union![0][1].union![0];
         expect(nestedUnion).toBeDefined();
         const nNested = (nestedUnion ?? []).length;
 
@@ -1898,7 +2199,7 @@ describe('query', () => {
           for (const [subject, starPatterns] of union.starPatterns) {
             const expectedStarPattern = expectedUnionStarPattern.get(subject);
             expect(starPatterns).toStrictEqual(expectedStarPattern);
-          }          
+          }
         }
 
       });
@@ -2214,7 +2515,7 @@ describe('query', () => {
               ]),
               name: 'http://localhost:3000/pods/00000002199023256816/profile/card#me',
               isVariable: false,
-              
+
             }
           ];
           const messageStarPattern: [string, IStarPatternWithDependencies] = [
@@ -2246,7 +2547,7 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              
+
             }
           ];
           const personStarPattern: [string, IStarPatternWithDependencies] = [
@@ -2289,7 +2590,7 @@ describe('query', () => {
               ]),
               name: "person",
               isVariable: true,
-              
+
             }
           ];
           const commentStarPattern: [string, IStarPatternWithDependencies] = [
@@ -2365,7 +2666,7 @@ describe('query', () => {
               ]),
               name: "comment",
               isVariable: true,
-              
+
             }
           ];
 
