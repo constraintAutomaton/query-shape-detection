@@ -2208,7 +2208,6 @@ describe('query', () => {
     describe("solidbench query", () => {
 
       describe("short", () => {
-        /** 
         test('interactive-short-2', () => {
           const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -2357,26 +2356,6 @@ describe('query', () => {
               ]),
               name: "message",
               isVariable: true,
-              oneOfs: [
-                {
-                  options: [
-                    {
-                      triple: new Triple({
-                        subject: 'message',
-                        predicate: `${SNVOC_PREFIX}content`,
-                        object: DF.variable('messageContent')
-                      })
-                    },
-                    {
-                      triple: new Triple({
-                        subject: 'message',
-                        predicate: `${SNVOC_PREFIX}imageFile`,
-                        object: DF.variable('messageContent')
-                      })
-                    }
-                  ]
-                },
-              ]
             }
           ];
 
@@ -2453,6 +2432,46 @@ describe('query', () => {
             }
           ];
 
+          const unionMessageContent: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}content`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}content`,
+                      object: DF.variable('messageContent')
+                    }),
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
+          const unionMessageImageFile: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}imageFile`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}imageFile`,
+                      object: DF.variable('messageContent')
+                    }),
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            }
+          ];
+
           const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
             originalPostInnerPattern,
             messageStarPattern,
@@ -2461,6 +2480,15 @@ describe('query', () => {
             personStarPattern
           ]);
 
+          const expectedUnions = [
+            new Map<string, any>([
+              unionMessageContent,
+            ]),
+            new Map<string, any>([
+              unionMessageImageFile,
+            ]),
+          ];
+
           const resp = generateQuery(translate(query));
 
           expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
@@ -2468,8 +2496,20 @@ describe('query', () => {
           for (const [subject, starPatterns] of resp.starPatterns) {
             expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
           }
+
+          expect(resp.union).toBeDefined();
+          expect(resp.union?.length).toBe(1);
+          const union = resp.union![0];
+          expect(union.length).toBe(2);
+          for (let i = 0; i < union.length; i++) {
+            const unionQuery = union[i];
+            const expectedUnion = expectedUnions[i];
+
+            for (const [subject, starPatterns] of unionQuery.starPatterns) {
+              expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
+            }
+          }
         });
-        */
       });
 
       describe("complex", () => {
