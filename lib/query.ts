@@ -15,6 +15,23 @@ export interface IQuery {
   filterExpression?: string;
 }
 
+export function generateStarPatternUnion(union: IQuery[][], starPatternName: string): IStarPatternWithDependencies[][] {
+  const resp: IStarPatternWithDependencies[][] = [];
+  for (const unionSet of union) {
+    const currentUnionSet: IStarPatternWithDependencies[] = [];
+    for (const union of unionSet) {
+      const requestedStarPattern = union.starPatterns.get(starPatternName);
+      if (requestedStarPattern !== undefined) {
+        currentUnionSet.push(requestedStarPattern);
+      }
+    }
+    if (currentUnionSet.length > 0) {
+      resp.push(currentUnionSet)
+    }
+  }
+  return resp;
+}
+
 /**
  * Divide a query into subject group
  * @param {Algebra.Operation} algebraQuery - the algebra of a query

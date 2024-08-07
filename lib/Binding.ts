@@ -56,21 +56,26 @@ export class Bindings implements IBindings {
     private nestedContainedStarPatternName: IDependentStarPattern[] = [];
     private nestedContainedStarPatternNameShapesContained = new Map<string, string[]>();
     private readonly oneOfs: OneOfBinding[];
+    private unionBindings: UnionBinding[] = [];
 
-    public constructor(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>) {
+    public constructor(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>, unionStarPattern?: IStarPatternWithDependencies[][]) {
         this.closedShape = shape.closed;
         for (const { triple } of starPattern.starPattern.values()) {
             this.bindings.set(triple.predicate, undefined);
         }
         this.oneOfs = shape.oneOfIndexed.map((oneOfs: OneOfPathIndexed[]) => new OneOfBinding(oneOfs));
-        this.calculateBinding(shape, starPattern, linkedShape);
+        this.calculateBinding(shape, starPattern, linkedShape, unionStarPattern ?? []);
 
         // delete duplicate
         this.unboundTriple = Array.from(new Set(this.unboundTriple));
     }
 
 
-    private calculateBinding(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>):void {
+    private calculateBinding(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>, unionStarPattern: IStarPatternWithDependencies[][]): void {
+        for (const union of unionStarPattern) {
+            this.unionBindings.push(new UnionBinding(shape, union, linkedShape));
+        }
+
         for (const { triple, dependencies } of starPattern.starPattern.values()) {
             if (!this.closedShape) {
                 this.bindings.set(triple.predicate, triple);
@@ -115,7 +120,11 @@ export class Bindings implements IBindings {
         if (shape.closed === false) {
             this.fullyBounded = starPattern.starPattern.size !== 0;
         } else {
-            this.fullyBounded = this.unboundTriple.length === 0 && starPattern.starPattern.size !== 0;
+            let boundedUnion = true;
+            for (const unionBinding of this.unionBindings) {
+                boundedUnion = unionBinding.hasOneContained && boundedUnion;
+            }
+            this.fullyBounded = this.unboundTriple.length === 0 && starPattern.starPattern.size !== 0 && boundedUnion;
         }
         if (this.fullyBounded) {
             const cycle = new Set<string>();
@@ -126,7 +135,7 @@ export class Bindings implements IBindings {
                 result.delete(starPattern);
             }
             let nestedContainedStarPatternName: string[] = [];
-            for (const  nestedConstrainStarPattern of result.values()) {
+            for (const nestedConstrainStarPattern of result.values()) {
                 nestedContainedStarPatternName = nestedContainedStarPatternName.concat(nestedConstrainStarPattern);
             }
             // delete duplicate
@@ -143,7 +152,7 @@ export class Bindings implements IBindings {
         }
     }
 
-    private fillNestedContainedStarPatternName(starPattern: IStarPatternWithDependencies, cycle: Set<string>, originalName: string, rejectedValues: Set<string>, result: Map<string, string[]>):void {
+    private fillNestedContainedStarPatternName(starPattern: IStarPatternWithDependencies, cycle: Set<string>, originalName: string, rejectedValues: Set<string>, result: Map<string, string[]>): void {
         for (const { dependencies } of starPattern.starPattern.values()) {
             if (dependencies !== undefined) {
                 const currentBranch = result.get(starPattern.name);
@@ -252,7 +261,7 @@ export class Bindings implements IBindings {
     }
 
 
-    public isFullyBounded():boolean {
+    public isFullyBounded(): boolean {
         return this.fullyBounded;
     }
 
@@ -299,5 +308,37 @@ export class OneOfBinding {
             }
         }
         return resp.length === 0 ? undefined : resp;
+    }
+}
+
+export class UnionBinding {
+    private readonly bindings: IBindings[];
+    public readonly hasOneContained: boolean;
+    public readonly areAllContained: boolean;
+
+    public constructor(shape: IShape, union: IStarPatternWithDependencies[], linkedShape: Map<string, IShape>) {
+        this.bindings = [];
+        for (const starPattern of union) {
+            this.bindings.push(new Bindings(shape, starPattern, linkedShape));
+        }
+        this.hasOneContained = this.determineHasOneAtLeastContainment();
+        this.areAllContained = this.determineAllContained();
+
+    }
+
+    private determineHasOneAtLeastContainment(): boolean {
+        let hasOneContainment = false;
+        for (const binding of this.bindings) {
+            hasOneContainment = hasOneContainment || binding.isFullyBounded();
+        }
+        return hasOneContainment;
+    }
+
+    private determineAllContained(): boolean {
+        let hasOneContainment = true;
+        for (const binding of this.bindings) {
+            hasOneContainment = hasOneContainment && binding.isFullyBounded();
+        }
+        return hasOneContainment;
     }
 }

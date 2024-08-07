@@ -12,7 +12,6 @@ export interface IStarPatternWithDependencies {
   isVariable: boolean;
 }
 
-
 export interface ITripleWithDependencies {
   triple: ITriple;
   dependencies?: IStarPatternWithDependencies;

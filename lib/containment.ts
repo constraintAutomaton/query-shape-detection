@@ -1,6 +1,6 @@
 import { Bindings, IBindings, IDependentStarPattern } from './Binding'
 import { TYPE_DEFINITION } from './constant';
-import type { IQuery } from './query';
+import { generateStarPatternUnion, type IQuery } from './query';
 import { IShape } from './Shape';
 import type { ITriple } from './Triple';
 
@@ -32,7 +32,8 @@ export function solveShapeQueryContainment({ query, shapes }: IContainementArg):
     bindingResult.set(shape.name, new Map());
     const bindingResultofShape = bindingResult.get(shape.name)!;
     for (const [starPatternName, starPattern] of query.starPatterns) {
-      const bindings = new Bindings(shape, starPattern, dependencies);
+      const starPatternUnion = generateStarPatternUnion(query.union??[],starPatternName);
+      const bindings = new Bindings(shape, starPattern, dependencies, starPatternUnion);
       const currentNestedStarPattern = bindings.getNestedContainedStarPatternName();
       for (const starPattern of currentNestedStarPattern) {
         const currentNestedContainedStarPatterns = nestedContainedStarPatterns.get(starPattern.starPattern);

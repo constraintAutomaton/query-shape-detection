@@ -1,5 +1,5 @@
 import { DataFactory } from 'rdf-data-factory';
-import { Bindings, OneOfBinding } from '../lib/Binding';
+import { Bindings, OneOfBinding, UnionBinding } from '../lib/Binding';
 import { ContraintType, IShape, OneOf, OneOfPathIndexed, Shape } from '../lib/Shape';
 import { IStarPatternWithDependencies, ITriple, Triple } from '../lib/Triple';
 import { BaseQuad } from '@rdfjs/types';
@@ -24,7 +24,7 @@ describe('Bindings', () => {
                 starPattern: new Map(),
                 name: "",
                 isVariable: true,
-                
+
             };
 
             const bindings = new Bindings(shape, starPattern, linkedShape);
@@ -58,7 +58,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, undefined]]);
@@ -97,7 +97,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -134,7 +134,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -171,7 +171,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, undefined]]);
@@ -232,7 +232,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -297,7 +297,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -362,7 +362,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -430,7 +430,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -445,7 +445,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -504,7 +504,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -519,7 +519,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -599,7 +599,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -628,7 +628,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -691,7 +691,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -753,7 +753,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -768,7 +768,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, undefined]]);
@@ -942,7 +942,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern4: IStarPatternWithDependencies = {
@@ -957,7 +957,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern3: IStarPatternWithDependencies = {
@@ -972,7 +972,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern2: IStarPatternWithDependencies = {
@@ -994,7 +994,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zz",
                 isVariable: true,
-                
+
             };
 
 
@@ -1010,7 +1010,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
 
@@ -1040,7 +1040,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -1228,7 +1228,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern4: IStarPatternWithDependencies = {
@@ -1243,7 +1243,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern3: IStarPatternWithDependencies = {
@@ -1258,7 +1258,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern2: IStarPatternWithDependencies = {
@@ -1280,7 +1280,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zz",
                 isVariable: true,
-                
+
             };
 
 
@@ -1296,7 +1296,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
 
@@ -1326,7 +1326,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -1494,7 +1494,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern4: IStarPatternWithDependencies = {
@@ -1509,7 +1509,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern3: IStarPatternWithDependencies = {
@@ -1524,7 +1524,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern2: IStarPatternWithDependencies = {
@@ -1546,7 +1546,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zz",
                 isVariable: true,
-                
+
             };
 
 
@@ -1562,7 +1562,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
 
@@ -1592,7 +1592,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -1645,7 +1645,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -1692,7 +1692,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -1739,7 +1739,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, undefined]]);
@@ -1824,7 +1824,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -1913,7 +1913,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -2088,7 +2088,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern4: IStarPatternWithDependencies = {
@@ -2103,7 +2103,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern3: IStarPatternWithDependencies = {
@@ -2118,7 +2118,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern2: IStarPatternWithDependencies = {
@@ -2140,7 +2140,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zz",
                 isVariable: true,
-                
+
             };
 
 
@@ -2156,7 +2156,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
 
@@ -2186,7 +2186,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -2380,7 +2380,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern4: IStarPatternWithDependencies = {
@@ -2395,7 +2395,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern3: IStarPatternWithDependencies = {
@@ -2410,7 +2410,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zzz",
                 isVariable: true,
-                
+
             };
 
             const dependentStarPattern2: IStarPatternWithDependencies = {
@@ -2432,7 +2432,7 @@ describe('Bindings', () => {
                 ]),
                 name: "zz",
                 isVariable: true,
-                
+
             };
 
 
@@ -2448,7 +2448,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
 
@@ -2478,7 +2478,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -2627,58 +2627,6 @@ describe('Bindings', () => {
             ]);
         });
 
-        it('interactive-complex-8', async () => {
-            const stringQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
-            SELECT ?personId ?personFirstName ?personLastName ?commentCreationDate ?commentId ?commentContent WHERE {
-              VALUES ?type {
-                snvoc:Comment
-                snvoc:Post
-              }
-              <http://localhost:3000/pods/00000002199023256816/profile/card#me> rdf:type snvoc:Person.
-              ?message snvoc:hasCreator <http://localhost:3000/pods/00000002199023256816/profile/card#me>;
-                rdf:type ?type.
-              ?comment rdf:type snvoc:Comment;
-                snvoc:replyOf ?message;
-                snvoc:creationDate ?commentCreationDate;
-                snvoc:id ?commentId;
-                snvoc:content ?commentContent;
-                snvoc:hasCreator ?person.
-              ?person snvoc:id ?personId;
-                snvoc:firstName ?personFirstName;
-                snvoc:lastName ?personLastName.
-            }
-            ORDER BY DESC (?commentCreationDate) (?commentId)
-            LIMIT 20`;
-            const query = generateQuery(translate(stringQuery));
-            const commentStarPattern = query.starPatterns.get("comment")!;
-            const shapeIndexed: Map<string, IShape> = await generateSolidBenchShapes();
-            const shape: IShape = shapeIndexed.get("http://example.com#Comment")!;
-
-
-            const bindings = new Bindings(shape, commentStarPattern, new Map([
-                ["http://example.com#Post", shapeIndexed.get("http://example.com#Post")!],
-                ["http://example.com#Profile", shapeIndexed.get("http://example.com#Profile")!]
-            ]));
-
-            expect(bindings.isFullyBounded()).toBe(true);
-            expect(bindings.shouldVisitShape()).toBe(true);
-            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([
-                {
-                    shape: ["http://example.com#Post", "http://example.com#Comment"],
-                    starPattern: "message"
-                },
-                {
-                    shape: ["http://example.com#Profile"],
-                    starPattern: "person"
-                },
-                {
-                    shape: ["http://example.com#Profile"],
-                    starPattern: "http://localhost:3000/pods/00000002199023256816/profile/card#me"
-                }
-            ]);
-        });
-
         it('should handle no cycle', () => {
             const queryString = `
             SELECT * WHERE { 
@@ -2743,34 +2691,6 @@ describe('Bindings', () => {
             ]);
         });
 
-        async function generateSolidBenchShapes(): Promise<Map<string, IShape>> {
-            const commentShapeFile = "./test/shape/solidbench_comment.ttl";
-            const postShapeFile = "./test/shape/solidbench_post.ttl";
-            const profileShapeFile = "./test/shape/solidbench_profile.ttl";
-
-            const commentShape = await shapeFromQuads(populateStream(commentShapeFile), "http://example.com#Comment");
-            const postShape = await shapeFromQuads(populateStream(postShapeFile), "http://example.com#Post");
-            const profileShape = await shapeFromQuads(populateStream(profileShapeFile), "http://example.com#Profile");
-            if ((commentShape instanceof Error) || (postShape instanceof Error) || (profileShape instanceof Error)) {
-                throw commentShape
-            }
-
-            return new Map([
-                [commentShape.name, commentShape],
-                [postShape.name, postShape],
-                [profileShape.name, profileShape]
-            ]);
-        }
-
-        function populateStream(source: string | RDF.Quad[]):any {
-            let quads;
-            if (Array.isArray(source)) {
-                quads = source;
-            } else {
-                quads = n3Parser.parse(readFileSync(source).toString());
-            }
-            return streamifyArray(quads);
-        }
     });
 
     describe('with one of', () => {
@@ -2805,7 +2725,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -2852,7 +2772,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -2899,7 +2819,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -2971,7 +2891,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -3067,7 +2987,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -3082,7 +3002,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, triple]]);
@@ -3192,7 +3112,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -3221,7 +3141,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([
@@ -3328,7 +3248,7 @@ describe('Bindings', () => {
                 ]),
                 name: "z",
                 isVariable: true,
-                
+
             };
 
             const starPattern: IStarPatternWithDependencies = {
@@ -3343,7 +3263,7 @@ describe('Bindings', () => {
                 ]),
                 name: "y",
                 isVariable: true,
-                
+
             };
 
             const expectedBindings = new Map([[triple.predicate, undefined]]);
@@ -3358,6 +3278,245 @@ describe('Bindings', () => {
             expect(bindings.getBoundTriple()).toStrictEqual([]);
         });
 
+    });
+
+    describe('with union', () => {
+        it('should handle a satisfying union', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0", "p1", "p2"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple1: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')]
+            });
+            const triple2: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p1',
+                object: [DF.namedNode('o0')]
+            });
+            const triple3: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p2',
+                object: [DF.namedNode('o0')]
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        triple1.predicate,
+                        {
+                            triple: triple1,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple2.predicate,
+                        {
+                            triple: triple2,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple3.predicate,
+                        {
+                            triple: triple3,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+            const unionStarPattern: IStarPatternWithDependencies[][] = [
+                [
+                    {
+                        starPattern: new Map([
+                            [triple1.predicate,
+                            { triple: triple1 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ],
+                [
+                    {
+                        starPattern: new Map([
+                            [triple2.predicate,
+                            { triple: triple2 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ]
+            ];
+
+            const expectedBindings = new Map([
+                [triple1.predicate, triple1],
+                [triple2.predicate, triple2],
+                [triple3.predicate, triple3]
+            ]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, unionStarPattern);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple1, triple2, triple3]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should handle an unsatisfying union', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0", "p1", "p2"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple1: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')]
+            });
+            const triple2: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p1',
+                object: [DF.namedNode('o0')]
+            });
+            const triple3: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p2',
+                object: [DF.namedNode('o0')]
+            });
+            const triple4: Triple = new Triple({
+                subject: 'y',
+                predicate: 'pUnknown',
+                object: [DF.namedNode('o0')]
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        triple1.predicate,
+                        {
+                            triple: triple1,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple2.predicate,
+                        {
+                            triple: triple2,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple3.predicate,
+                        {
+                            triple: triple3,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+            const unionStarPattern: IStarPatternWithDependencies[][] = [
+                [
+                    {
+                        starPattern: new Map([
+                            [triple4.predicate,
+                            { triple: triple4 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ],
+                [
+                    {
+                        starPattern: new Map([
+                            [triple2.predicate,
+                            { triple: triple2 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ]
+            ];
+
+            const expectedBindings = new Map([
+                [triple1.predicate, triple1],
+                [triple2.predicate, triple2],
+                [triple3.predicate, triple3]
+            ]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, unionStarPattern);
+
+            expect(bindings.isFullyBounded()).toBe(false);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple1, triple2, triple3]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+    });
+
+    describe('solidbench problems', () => {
+        test('interactive-complex-8 comment shape', async () => {
+            const stringQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+            SELECT ?personId ?personFirstName ?personLastName ?commentCreationDate ?commentId ?commentContent WHERE {
+              VALUES ?type {
+                snvoc:Comment
+                snvoc:Post
+              }
+              <http://localhost:3000/pods/00000002199023256816/profile/card#me> rdf:type snvoc:Person.
+              ?message snvoc:hasCreator <http://localhost:3000/pods/00000002199023256816/profile/card#me>;
+                rdf:type ?type.
+              ?comment rdf:type snvoc:Comment;
+                snvoc:replyOf ?message;
+                snvoc:creationDate ?commentCreationDate;
+                snvoc:id ?commentId;
+                snvoc:content ?commentContent;
+                snvoc:hasCreator ?person.
+              ?person snvoc:id ?personId;
+                snvoc:firstName ?personFirstName;
+                snvoc:lastName ?personLastName.
+            }
+            ORDER BY DESC (?commentCreationDate) (?commentId)
+            LIMIT 20`;
+            const query = generateQuery(translate(stringQuery));
+            const commentStarPattern = query.starPatterns.get("comment")!;
+            const shapeIndexed: Map<string, IShape> = await generateSolidBenchShapes();
+            const shape: IShape = shapeIndexed.get("http://example.com#Comment")!;
+
+
+            const bindings = new Bindings(shape, commentStarPattern, new Map([
+                ["http://example.com#Post", shapeIndexed.get("http://example.com#Post")!],
+                ["http://example.com#Profile", shapeIndexed.get("http://example.com#Profile")!]
+            ]));
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([
+                {
+                    shape: ["http://example.com#Post", "http://example.com#Comment"],
+                    starPattern: "message"
+                },
+                {
+                    shape: ["http://example.com#Profile"],
+                    starPattern: "person"
+                },
+                {
+                    shape: ["http://example.com#Profile"],
+                    starPattern: "http://localhost:3000/pods/00000002199023256816/profile/card#me"
+                }
+            ]);
+        });
     });
 });
 
@@ -3427,3 +3586,128 @@ describe('OneOfBinding', () => {
         ]);
     });
 });
+
+describe('UnionBinding', () => {
+    it('should handle a case where no binding is fully bounded', () => {
+        const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0"], closed: true });
+        const linkedShape = new Map<string, IShape>();
+        const union: IStarPatternWithDependencies[] = [
+            {
+                starPattern: new Map([
+                    ["foo",
+                        { triple: new Triple({ subject: "bar", predicate: "foo", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            },
+            {
+                starPattern: new Map([
+                    ["foo1",
+                        { triple: new Triple({ subject: "bar", predicate: "foo1", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            }
+        ];
+        const unionBinding = new UnionBinding(shape, union, linkedShape);
+
+        expect(unionBinding.areAllContained).toBe(false);
+        expect(unionBinding.hasOneContained).toBe(false);
+    });
+
+    it('should handle a case where there is one binding', () => {
+        const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0"], closed: true });
+        const linkedShape = new Map<string, IShape>();
+        const union: IStarPatternWithDependencies[] = [
+            {
+                starPattern: new Map([
+                    ["p0",
+                        { triple: new Triple({ subject: "bar", predicate: "p0", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            },
+            {
+                starPattern: new Map([
+                    ["foo1",
+                        { triple: new Triple({ subject: "bar", predicate: "foo1", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            }
+        ];
+        const unionBinding = new UnionBinding(shape, union, linkedShape);
+
+        expect(unionBinding.areAllContained).toBe(false);
+        expect(unionBinding.hasOneContained).toBe(true);
+    });
+
+    it('should handle a case where everything is bounded', () => {
+        const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0", "foo1"], closed: true });
+        const linkedShape = new Map<string, IShape>();
+        const union: IStarPatternWithDependencies[] = [
+            {
+                starPattern: new Map([
+                    ["p0",
+                        { triple: new Triple({ subject: "bar", predicate: "p0", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            },
+            {
+                starPattern: new Map([
+                    ["foo1",
+                        { triple: new Triple({ subject: "bar", predicate: "foo1", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            }
+        ];
+        const unionBinding = new UnionBinding(shape, union, linkedShape);
+
+        expect(unionBinding.areAllContained).toBe(true);
+        expect(unionBinding.hasOneContained).toBe(true);
+    });
+});
+
+
+async function generateSolidBenchShapes(): Promise<Map<string, IShape>> {
+    const commentShapeFile = "./test/shape/solidbench_comment.ttl";
+    const postShapeFile = "./test/shape/solidbench_post.ttl";
+    const profileShapeFile = "./test/shape/solidbench_profile.ttl";
+
+    const commentShape = await shapeFromQuads(populateStream(commentShapeFile), "http://example.com#Comment");
+    const postShape = await shapeFromQuads(populateStream(postShapeFile), "http://example.com#Post");
+    const profileShape = await shapeFromQuads(populateStream(profileShapeFile), "http://example.com#Profile");
+    if ((commentShape instanceof Error) || (postShape instanceof Error) || (profileShape instanceof Error)) {
+        throw new Error("was not able to generate the shapes")
+    }
+
+    return new Map([
+        [commentShape.name, commentShape],
+        [postShape.name, postShape],
+        [profileShape.name, profileShape]
+    ]);
+}
+
+function populateStream(source: string | RDF.Quad[]): any {
+    let quads;
+    if (Array.isArray(source)) {
+        quads = source;
+    } else {
+        quads = n3Parser.parse(readFileSync(source).toString());
+    }
+    return streamifyArray(quads);
+}

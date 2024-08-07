@@ -2,7 +2,7 @@ import type { BaseQuad } from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { translate } from 'sparqlalgebrajs';
 import { TYPE_DEFINITION } from '../lib/constant';
-import { generateQuery } from '../lib/query';
+import { generateQuery, generateStarPatternUnion, IQuery } from '../lib/query';
 import { IStarPatternWithDependencies, Triple } from '../lib/Triple';
 
 const DF = new DataFactory<BaseQuad>();
@@ -1748,7 +1748,7 @@ describe('query', () => {
                       subject: 'message',
                       predicate: 'http://exemple.be#test3',
                       object: DF.variable("foo"),
-                      cardinality: {min:0, max:1}
+                      cardinality: { min: 0, max: 1 }
                     }),
                     dependencies: undefined
                   }
@@ -1848,7 +1848,7 @@ describe('query', () => {
                     triple: new Triple({
                       subject: test1seq1.value,
                       predicate: 'http://exemple.be#test4',
-                      cardinality: {min:0, max:-1},
+                      cardinality: { min: 0, max: -1 },
                       object: DF.variable('foo')
                     }),
                     dependencies: undefined
@@ -1896,7 +1896,7 @@ describe('query', () => {
           const firstBranch = unionQueries[0];
           const secondBranch = unionQueries[1];
 
-          expect(secondBranch.starPatterns).toStrictEqual(starPatternUnionOption2); 
+          expect(secondBranch.starPatterns).toStrictEqual(starPatternUnionOption2);
 
           expect(firstBranch.starPatterns).toStrictEqual(starPatternUnionOption1);
 
@@ -1906,9 +1906,9 @@ describe('query', () => {
           const nestedFirstQueriesUnion = nestedFirstBranchUnion[0];
           expect(nestedFirstQueriesUnion.length).toBe(2);
           nestedFirstQueriesUnion[0].starPatterns = new Map([test2StarPattern]);
-          expect( nestedFirstQueriesUnion[0].union).toBeUndefined();
+          expect(nestedFirstQueriesUnion[0].union).toBeUndefined();
           nestedFirstQueriesUnion[1].starPatterns = new Map([test4StarPattern]);
-          expect( nestedFirstQueriesUnion[1].union).toBeUndefined();
+          expect(nestedFirstQueriesUnion[1].union).toBeUndefined();
         });
       });
     });
@@ -3186,7 +3186,7 @@ describe('query', () => {
               ?person snvoc:id ?personId .
           }
           `;
-          
+
           const personStarPattern: [string, IStarPatternWithDependencies] = [
             'person',
             {
@@ -3403,7 +3403,7 @@ describe('query', () => {
 
         });
 
-        test('interactive-short-4', ()=>{
+        test('interactive-short-4', () => {
           const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
           PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -3523,7 +3523,7 @@ describe('query', () => {
           expect(union[1].union).toBeUndefined();
         });
 
-        test('interactive-short-5', ()=>{
+        test('interactive-short-5', () => {
           const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
           PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -3618,7 +3618,7 @@ describe('query', () => {
                     dependencies: creatorStarPattern[1]
                   }
                 ],
-                
+
               ]),
               name: "message",
               isVariable: true,
@@ -3996,5 +3996,86 @@ describe('query', () => {
 
     });
   });
+
+  describe("generateStarPatternUnion", () => {
+    it("should generate no star pattern union given an empty union", () => {
+      const union: IQuery[][] = [];
+      const starPatternName = "foo";
+
+      const expectedStarPattern: IStarPatternWithDependencies[][] = [];
+
+      const resp = generateStarPatternUnion(union, starPatternName);
+
+      expect(resp).toStrictEqual(expectedStarPattern);
+
+    });
+
+    it("should generate no star pattern given the star pattern name is not present in the union", () => {
+      const union: any[][] = [
+        [
+          {
+            starPatterns: new Map([["foo1", true], ["foo2", true], ["foo3", true]])
+          },
+          {
+            starPatterns: new Map([["foo4", true], ["foo5", true], ["foo6", true]])
+          }
+        ],
+        [
+          {
+            starPatterns: new Map([["foo7", true], ["foo8", true]])
+          },
+          {
+            starPatterns: new Map([["foo9", true]])
+          }
+        ]
+      ];
+      const starPatternName = "foo";
+
+      const expectedStarPattern: IStarPatternWithDependencies[][] = [];
+
+      const resp = generateStarPatternUnion(union, starPatternName);
+
+      expect(resp).toStrictEqual(expectedStarPattern);
+    });
+
+    it("should generate a star pattern given the star pattern name is not present in the union", () => {
+      const union: any[][] = [
+        [
+          {
+            starPatterns: new Map([["foo", "foo"], ["foo2", "foo2"], ["foo3", "foo3"]])
+          },
+          {
+            starPatterns: new Map([["foo", "foo_1"], ["foo5", "foo5"], ["foo6", "foo6"]])
+          }
+        ],
+        [
+          {
+            starPatterns: new Map([["foo7", "foo7"], ["foo8", "foo8"]])
+          },
+          {
+            starPatterns: new Map([["foo9", "foo9"]])
+          }
+        ],
+        [
+          {
+            starPatterns: new Map([["foo", "foo_2"]])
+          },
+          {
+            starPatterns: new Map([["foo10", "foo10"], ["foo11", "foo11"]])
+          }
+        ],
+      ];
+      const starPatternName = "foo";
+
+      const expectedStarPattern: any[][] = [
+        ["foo", "foo_1"],
+        ["foo_2"]
+      ];
+
+      const resp = generateStarPatternUnion(union, starPatternName);
+
+      expect(resp).toStrictEqual(expectedStarPattern);
+    });
+  })
 });
 
