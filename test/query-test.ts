@@ -3968,6 +3968,135 @@ describe('query', () => {
 
         test('interactive-discovery-7', ()=>{
           const query = `
+              PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+              PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+              PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+              PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+              PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+              PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+              PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+              PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+              SELECT
+              DISTINCT
+                  ?firstName
+                  ?lastName
+              WHERE
+              {
+                  ?message snvoc:hasCreator ?person.
+                  ?forum snvoc:containerOf ?message;
+                      snvoc:hasModerator ?moderator.
+                  ?moderator snvoc:firstName ?firstName .
+                  ?moderator snvoc:lastName ?lastName .
+              }
+          `;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const moderatorStarPattern: [string, IStarPatternWithDependencies] = [
+            'moderator',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}firstName`,
+                  {
+                    triple: new Triple({
+                      subject: 'moderator',
+                      predicate: `${SNVOC_PREFIX}firstName`,
+                      object: DF.variable(`firstName`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}lastName`,
+                  {
+                    triple: new Triple({
+                      subject: 'moderator',
+                      predicate: `${SNVOC_PREFIX}lastName`,
+                      object: DF.variable(`lastName`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "moderator",
+              isVariable: true,
+            },
+          ];
+
+
+          const forumStarPattern: [string, IStarPatternWithDependencies] = [
+            'forum',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}containerOf`,
+                  {
+                    triple: new Triple({
+                      subject: 'forum',
+                      predicate: `${SNVOC_PREFIX}containerOf`,
+                      object: DF.variable(`message`)
+                    }),
+                    dependencies: messageStarPattern[1]
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}hasModerator`,
+                  {
+                    triple: new Triple({
+                      subject: 'forum',
+                      predicate: `${SNVOC_PREFIX}hasModerator`,
+                      object: DF.variable(`moderator`)
+                    }),
+                    dependencies: moderatorStarPattern[1]
+                  }
+                ],
+                
+              ]),
+              name: "forum",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+            forumStarPattern,
+            moderatorStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+        });
+        test('interactive-discovery-8', ()=>{
+          const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
           PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
           PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -4044,27 +4173,6 @@ describe('query', () => {
             },
           ];
 
-          const blankNodeStarPatternHasPost: [string, IStarPatternWithDependencies] = [
-            DF.blankNode().value,
-            {
-              starPattern: new Map([
-                [
-                  `${SNVOC_PREFIX}likes`,
-                  {
-                    triple: new Triple({
-                      subject: 'person',
-                      predicate: `${SNVOC_PREFIX}likes`,
-                      object: DF.blankNode()
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "person",
-              isVariable: true,
-            },
-          ];
-
           const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
             messageStarPattern,
             otherMessageStarPattern
@@ -4090,7 +4198,7 @@ describe('query', () => {
             expect(pattern.dependencies).toBeUndefined();
             expect(pattern.triple.subject).toBe('person');
             expect(pattern.triple.predicate).toBe(`${SNVOC_PREFIX}likes`);
-            expect((<Term> pattern.triple.object).termType).toBe('BlankNode');
+            expect((pattern.triple.object as Term).termType).toBe('BlankNode');
           } 
 
           expect(resp.union).toBeDefined();
