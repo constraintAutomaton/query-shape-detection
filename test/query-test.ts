@@ -1,4 +1,4 @@
-import type { BaseQuad } from '@rdfjs/types';
+import type { BaseQuad,Term } from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { translate } from 'sparqlalgebrajs';
 import { TYPE_DEFINITION } from '../lib/constant';
@@ -2849,309 +2849,6 @@ describe('query', () => {
           }
         });
 
-        test('interactive-short-2', () => {
-          const query = `
-          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
-          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
-          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
-          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
-          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
-  
-          SELECT
-              ?messageId
-              ?messageContent
-              ?messageCreationDate
-              ?originalPostId
-              ?originalPostAuthorId
-              ?originalPostAuthorFirstName
-              ?originalPostAuthorLastName
-          WHERE {
-              ?person a snvoc:Person .
-              ?person snvoc:id ?personId .
-              ?message snvoc:hasCreator ?person .
-              ?message snvoc:content|snvoc:imageFile ?messageContent .
-              ?message snvoc:creationDate ?messageCreationDate .
-              ?message snvoc:id ?messageId .
-              OPTIONAL {
-                  ?message snvoc:replyOf* ?originalPostInner .
-                  ?originalPostInner a snvoc:Post .
-              } .
-              BIND( COALESCE(?originalPostInner, ?message) AS ?originalPost ) .
-              ?originalPost snvoc:id ?originalPostId .
-              ?originalPost snvoc:hasCreator ?creator .
-              ?creator snvoc:firstName ?originalPostAuthorFirstName .
-              ?creator snvoc:lastName ?originalPostAuthorLastName .
-              ?creator snvoc:id ?originalPostAuthorId .
-          }
-          LIMIT 10
-          `;
-
-          const originalPostInnerPattern: [string, IStarPatternWithDependencies] = [
-            'originalPostInner',
-            {
-              starPattern: new Map([
-                [
-                  RDF_TYPE,
-                  {
-                    triple: new Triple({
-                      subject: 'originalPostInner',
-                      predicate: RDF_TYPE,
-                      object: DF.namedNode(`${SNVOC_PREFIX}Post`)
-                    }),
-                    dependencies: undefined
-                  }
-                ]
-              ]),
-              name: 'originalPostInner',
-              isVariable: true,
-
-            }
-          ];
-
-          const personStarPattern: [string, IStarPatternWithDependencies] = [
-            'person',
-            {
-              starPattern: new Map([
-                [
-                  RDF_TYPE,
-                  {
-                    triple: new Triple({
-                      subject: 'person',
-                      predicate: RDF_TYPE,
-                      object: DF.namedNode(`${SNVOC_PREFIX}Person`)
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}id`,
-                  {
-                    triple: new Triple({
-                      subject: 'person',
-                      predicate: `${SNVOC_PREFIX}id`,
-                      object: DF.variable('personId')
-                    }),
-                    dependencies: undefined
-                  }
-                ]
-              ]),
-              name: "person",
-              isVariable: true,
-
-            }
-          ];
-
-          const messageStarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  `${SNVOC_PREFIX}hasCreator`,
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: `${SNVOC_PREFIX}hasCreator`,
-                      object: DF.variable('person')
-                    }),
-                    dependencies: personStarPattern[1]
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}creationDate`,
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: `${SNVOC_PREFIX}creationDate`,
-                      object: DF.variable('messageCreationDate')
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}id`,
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: `${SNVOC_PREFIX}id`,
-                      object: DF.variable('messageId')
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}replyOf`,
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: `${SNVOC_PREFIX}replyOf`,
-                      object: DF.variable('originalPostInner'),
-                      cardinality: { min: 0, max: -1 }
-                    }),
-                    dependencies: originalPostInnerPattern[1]
-                  }
-                ]
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
-
-          const creatorStarPattern: [string, IStarPatternWithDependencies] = [
-            'creator',
-            {
-              starPattern: new Map([
-                [
-                  `${SNVOC_PREFIX}firstName`,
-                  {
-                    triple: new Triple({
-                      subject: 'creator',
-                      predicate: `${SNVOC_PREFIX}firstName`,
-                      object: DF.variable('originalPostAuthorFirstName')
-                    })
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}lastName`,
-                  {
-                    triple: new Triple({
-                      subject: 'creator',
-                      predicate: `${SNVOC_PREFIX}lastName`,
-                      object: DF.variable('originalPostAuthorLastName')
-                    })
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}id`,
-                  {
-                    triple: new Triple({
-                      subject: 'creator',
-                      predicate: `${SNVOC_PREFIX}id`,
-                      object: DF.variable('originalPostAuthorId')
-                    })
-                  }
-                ]
-              ]),
-              name: 'creator',
-              isVariable: true,
-
-            }
-          ];
-
-          const originalPostStarPattern: [string, IStarPatternWithDependencies] = [
-            'originalPost',
-            {
-              starPattern: new Map([
-                [
-                  `${SNVOC_PREFIX}id`,
-                  {
-                    triple: new Triple({
-                      subject: 'originalPost',
-                      predicate: `${SNVOC_PREFIX}id`,
-                      object: DF.variable('originalPostId')
-                    })
-                  }
-                ],
-                [
-                  `${SNVOC_PREFIX}hasCreator`,
-                  {
-                    triple: new Triple({
-                      subject: 'originalPost',
-                      predicate: `${SNVOC_PREFIX}hasCreator`,
-                      object: DF.variable('creator')
-                    }),
-                    dependencies: creatorStarPattern[1]
-                  }
-                ]
-              ]),
-              name: 'originalPost',
-              isVariable: true,
-
-            }
-          ];
-
-          const unionMessageContent: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  `${SNVOC_PREFIX}content`,
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: `${SNVOC_PREFIX}content`,
-                      object: DF.variable('messageContent')
-                    }),
-                  }
-                ]
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
-
-          const unionMessageImageFile: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  `${SNVOC_PREFIX}imageFile`,
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: `${SNVOC_PREFIX}imageFile`,
-                      object: DF.variable('messageContent')
-                    }),
-                  }
-                ]
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
-
-          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
-            originalPostInnerPattern,
-            messageStarPattern,
-            creatorStarPattern,
-            originalPostStarPattern,
-            personStarPattern
-          ]);
-
-          const expectedUnions = [
-            new Map<string, any>([
-              unionMessageContent,
-            ]),
-            new Map<string, any>([
-              unionMessageImageFile,
-            ]),
-          ];
-
-          const resp = generateQuery(translate(query));
-
-          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
-          expect(resp.filterExpression).toBe('');
-          for (const [subject, starPatterns] of resp.starPatterns) {
-            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
-          }
-
-          expect(resp.union).toBeDefined();
-          expect(resp.union?.length).toBe(1);
-          const union = resp.union![0];
-          expect(union.length).toBe(2);
-          for (let i = 0; i < union.length; i++) {
-            const unionQuery = union[i];
-            const expectedUnion = expectedUnions[i];
-
-            for (const [subject, starPatterns] of unionQuery.starPatterns) {
-              expect(starPatterns).toStrictEqual(expectedUnion.get(subject));
-            }
-          }
-        });
-
         test('interactive-short-3', () => {
           const query = `
           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -3640,6 +3337,792 @@ describe('query', () => {
 
           expect(resp.union).toBeUndefined();
 
+        });
+      });
+
+      describe("discovery", ()=>{
+        test('interactive-discovery-1', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?messageId
+              ?messageCreationDate
+              ?messageContent
+          WHERE
+          {
+              ?message snvoc:hasCreator ?person;
+                  rdf:type snvoc:Post;
+                  snvoc:content ?messageContent;
+                  snvoc:creationDate ?messageCreationDate;
+                  snvoc:id ?messageId.
+          }
+          `;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`messageId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}creationDate`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}creationDate`,
+                      object: DF.variable(`messageCreationDate`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}content`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}content`,
+                      object: DF.variable(`messageContent`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  RDF_TYPE,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: RDF_TYPE,
+                      object: DF.namedNode(`${SNVOC_PREFIX}Post`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+        });
+
+        test('interactive-discovery-2', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?messageId
+              ?messageCreationDate
+              ?messageContent
+          WHERE
+          {
+              ?message snvoc:hasCreator ?person;
+                  snvoc:content ?messageContent;
+                  snvoc:creationDate ?messageCreationDate;
+                  snvoc:id ?messageId.
+              { ?message rdf:type snvoc:Post } UNION { ?message rdf:type snvoc:Comment }
+          }
+          `;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`messageId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}creationDate`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}creationDate`,
+                      object: DF.variable(`messageCreationDate`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}content`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}content`,
+                      object: DF.variable(`messageContent`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          const messageContentTypePostStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  RDF_TYPE,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: RDF_TYPE,
+                      object: DF.namedNode(`${SNVOC_PREFIX}Post`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const messageContentTypeCommentStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  RDF_TYPE,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: RDF_TYPE,
+                      object: DF.namedNode(`${SNVOC_PREFIX}Comment`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeDefined();
+          const unions = resp.union!;
+          expect(unions.length).toBe(1);
+          const union = unions[0];
+          expect(union.length).toBe(2);
+          expect(union[0].starPatterns).toStrictEqual(new Map([messageContentTypePostStarPattern]));
+          expect(union[0].union).toBeUndefined();
+          expect(union[1].starPatterns).toStrictEqual(new Map([messageContentTypeCommentStarPattern]));
+          expect(union[1].union).toBeUndefined();
+        });
+
+        test('interactive-discovery-3', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?tagName
+              (COUNT(?message) as ?messages)
+          WHERE
+          {
+              ?message snvoc:hasCreator ?person;
+                  snvoc:hasTag ?tag.
+              ?tag foaf:name ?tagName.
+          }
+          GROUP BY ?tagName
+          ORDER BY DESC(?messages)
+          `;
+
+          const tagStarPattern: [string, IStarPatternWithDependencies] = [
+            'tag',
+            {
+              starPattern: new Map([
+                [
+                  `http://xmlns.com/foaf/0.1/name`,
+                  {
+                    triple: new Triple({
+                      subject: 'tag',
+                      predicate: `http://xmlns.com/foaf/0.1/name`,
+                      object: DF.variable(`tagName`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "tag",
+              isVariable: true,
+            }
+          ];
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}hasTag`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasTag`,
+                      object: DF.variable(`tag`)
+                    }),
+                    dependencies: tagStarPattern[1]
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+            tagStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+        });
+
+        test('interactive-discovery-4', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+              ?locationName
+              (COUNT(?message) as ?messages)
+          WHERE
+          {
+              ?message snvoc:hasCreator ?person;
+                  rdf:type snvoc:Comment;
+                  snvoc:isLocatedIn ?location.
+              ?location foaf:name ?locationName.
+          }
+          GROUP BY ?locationName
+          ORDER BY DESC(?messages)
+          `;
+
+          const locationStarPattern: [string, IStarPatternWithDependencies] = [
+            'location',
+            {
+              starPattern: new Map([
+                [
+                  `http://xmlns.com/foaf/0.1/name`,
+                  {
+                    triple: new Triple({
+                      subject: 'location',
+                      predicate: `http://xmlns.com/foaf/0.1/name`,
+                      object: DF.variable(`locationName`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "location",
+              isVariable: true,
+            }
+          ];
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  RDF_TYPE,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: RDF_TYPE,
+                      object: DF.namedNode(`${SNVOC_PREFIX}Comment`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}isLocatedIn`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}isLocatedIn`,
+                      object: DF.variable(`location`)
+                    }),
+                    dependencies: locationStarPattern[1]
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+            locationStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+        });
+
+        test('interactive-discovery-5', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+          DISTINCT
+              ?locationIp
+          WHERE
+          {
+              ?message snvoc:hasCreator ?person;
+                  snvoc:locationIP ?locationIp.
+          }
+          `;
+
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}locationIP`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}locationIP`,
+                      object: DF.variable(`locationIp`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+        });
+
+        test('interactive-discovery-6', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+          DISTINCT
+              ?forumId
+              ?forumTitle
+          WHERE
+          {
+              ?message snvoc:hasCreator ?person.
+              ?forum snvoc:containerOf ?message;
+                      snvoc:id ?forumId;
+                      snvoc:title ?forumTitle.
+          }
+          `;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`person`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const forumStarPattern: [string, IStarPatternWithDependencies] = [
+            'forum',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}containerOf`,
+                  {
+                    triple: new Triple({
+                      subject: 'forum',
+                      predicate: `${SNVOC_PREFIX}containerOf`,
+                      object: DF.variable(`message`)
+                    }),
+                    dependencies: messageStarPattern[1]
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}id`,
+                  {
+                    triple: new Triple({
+                      subject: 'forum',
+                      predicate: `${SNVOC_PREFIX}id`,
+                      object: DF.variable(`forumId`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}title`,
+                  {
+                    triple: new Triple({
+                      subject: 'forum',
+                      predicate: `${SNVOC_PREFIX}title`,
+                      object: DF.variable(`forumTitle`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "forum",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+            forumStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          expect(resp.union).toBeUndefined();
+        });
+
+        test('interactive-discovery-7', ()=>{
+          const query = `
+          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+          PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+          PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+          PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+          PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+          PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+          PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+          SELECT
+          DISTINCT
+              ?creator
+              ?messageContent
+          WHERE
+          {
+              ?person snvoc:likes [ snvoc:hasPost|snvoc:hasComment ?message ].
+              ?message snvoc:hasCreator ?creator.
+              ?otherMessage snvoc:hasCreator ?creator;
+                  snvoc:content ?messageContent.
+          } LIMIT 10
+          `;
+
+          const messageStarPattern: [string, IStarPatternWithDependencies] = [
+            'message',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'message',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`creator`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "message",
+              isVariable: true,
+            },
+          ];
+
+          const otherMessageStarPattern: [string, IStarPatternWithDependencies] = [
+            'otherMessage',
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}hasCreator`,
+                  {
+                    triple: new Triple({
+                      subject: 'otherMessage',
+                      predicate: `${SNVOC_PREFIX}hasCreator`,
+                      object: DF.variable(`creator`)
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+                [
+                  `${SNVOC_PREFIX}content`,
+                  {
+                    triple: new Triple({
+                      subject: 'otherMessage',
+                      predicate: `${SNVOC_PREFIX}content`,
+                      object: DF.variable(`messageContent`)
+                    }),
+                    dependencies: undefined
+                  }
+                ]
+              ]),
+              name: "otherMessage",
+              isVariable: true,
+            },
+          ];
+
+          const blankNodeStarPatternHasPost: [string, IStarPatternWithDependencies] = [
+            DF.blankNode().value,
+            {
+              starPattern: new Map([
+                [
+                  `${SNVOC_PREFIX}likes`,
+                  {
+                    triple: new Triple({
+                      subject: 'person',
+                      predicate: `${SNVOC_PREFIX}likes`,
+                      object: DF.blankNode()
+                    }),
+                    dependencies: undefined
+                  }
+                ],
+              ]),
+              name: "person",
+              isVariable: true,
+            },
+          ];
+
+          const expectedStarPattern = new Map<string, IStarPatternWithDependencies>([
+            messageStarPattern,
+            otherMessageStarPattern
+          ]);
+
+          const resp = generateQuery(translate(query));
+
+          expect(resp.starPatterns.size).toBe(expectedStarPattern.size+1);
+          expect(resp.filterExpression).toBe('');
+          for (const [subject, starPatterns] of resp.starPatterns) {
+            if(subject==='person'){
+              continue;
+            }
+            expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+          }
+
+          const personSujet = resp.starPatterns.get('person');
+          expect(personSujet?.filterExpression).toBeUndefined();
+          expect(personSujet?.isVariable).toBe(true);
+          expect(personSujet?.name).toBe('person');
+          expect(personSujet?.starPattern.size).toBe(1);
+          for(const  pattern of personSujet?.starPattern.values() ?? []){
+            expect(pattern.dependencies).toBeUndefined();
+            expect(pattern.triple.subject).toBe('person');
+            expect(pattern.triple.predicate).toBe(`${SNVOC_PREFIX}likes`);
+            expect((<Term> pattern.triple.object).termType).toBe('BlankNode');
+          } 
+
+          expect(resp.union).toBeDefined();
+          const unions = resp.union!;
+          expect(unions.length).toBe(1);
+          const union = unions[0];
+          expect(union.length).toBe(2);
+          expect(union[0].starPatterns.size).toBe(1);
+          for(const  starPattern of union[0].starPatterns.values() ?? []){
+            expect(starPattern.name).toBeDefined();
+            expect(starPattern.isVariable).toBe(false);
+
+            for(const  pattern of starPattern.starPattern.values() ?? []){
+              expect(pattern.dependencies).toBeUndefined();
+              expect(pattern.triple.subject).toBeDefined();
+              expect(pattern.triple.predicate).toBe(`${SNVOC_PREFIX}hasPost`);
+              expect(pattern.triple.object).toStrictEqual(DF.variable('message'));
+            } 
+          }
+
+          expect(union[1].starPatterns.size).toBe(1);
+          for(const  starPattern of union[1].starPatterns.values() ?? []){
+            expect(starPattern.name).toBeDefined();
+            expect(starPattern.isVariable).toBe(false);
+
+            for(const  pattern of starPattern.starPattern.values() ?? []){
+              expect(pattern.dependencies).toBeUndefined();
+              expect(pattern.triple.subject).toBeDefined();
+              expect(pattern.triple.predicate).toBe(`${SNVOC_PREFIX}hasComment`);
+              expect(pattern.triple.object).toStrictEqual(DF.variable('message'));
+            } 
+          }
         });
       });
 
