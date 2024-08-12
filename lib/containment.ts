@@ -109,7 +109,7 @@ function updateStarPatternContainment(starPatternsContainment: Map<ShapeName, IC
     });
 
   }
-  if (bindings.shouldVisitShape() && bindings.getUnboundedTriple().length === 0) {
+  if (bindings.shouldVisitShape() && bindings.isFullyBounded()) {
     starPatternsContainment.set(starPatternName, {
       result: ContainmentResult.CONTAIN,
       target: prevContainmentResult.result === ContainmentResult.ALIGNED ? [shape.name] :
