@@ -1,5 +1,5 @@
 import { ContraintType, IContraint, IPredicate, IShape, OneOfPathIndexed } from "./Shape";
-import { IStarPatternWithDependencies, type ITriple } from "./Triple";
+import { IStarPatternWithDependencies, type ITriple, Triple } from "./Triple";
 
 /**
  * A binding from a query to a shape
@@ -57,11 +57,17 @@ export class Bindings implements IBindings {
     private nestedContainedStarPatternNameShapesContained = new Map<string, string[]>();
     private readonly oneOfs: OneOfBinding[];
     private unionBindings: UnionBinding[] = [];
+    private shapePredicateBind = new Map<string, boolean>();
+    private strict: boolean;
 
-    public constructor(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>, unionStarPattern?: IStarPatternWithDependencies[][]) {
+    public constructor(shape: IShape, starPattern: IStarPatternWithDependencies, linkedShape: Map<string, IShape>, unionStarPattern?: IStarPatternWithDependencies[][], strict?: boolean) {
+        this.strict = strict ?? false;
         this.closedShape = shape.closed;
         for (const { triple } of starPattern.starPattern.values()) {
             this.bindings.set(triple.predicate, undefined);
+        }
+        for (const predicate of shape.getAll()) {
+            this.shapePredicateBind.set(predicate.name, false);
         }
         this.oneOfs = shape.oneOfIndexed.map((oneOfs: OneOfPathIndexed[]) => new OneOfBinding(oneOfs));
         this.calculateBinding(shape, starPattern, linkedShape, unionStarPattern ?? []);
@@ -75,10 +81,14 @@ export class Bindings implements IBindings {
         for (const union of unionStarPattern) {
             this.unionBindings.push(new UnionBinding(shape, union, linkedShape));
         }
-
+        const negatedTriples: ITriple[] = [];
         for (const { triple, dependencies } of starPattern.starPattern.values()) {
             if (!this.closedShape) {
                 this.bindings.set(triple.predicate, triple);
+                continue;
+            }
+            if (triple.predicate === Triple.NEGATIVE_PREDICATE_SET) {
+                negatedTriples.push(triple);
                 continue;
             }
             const singlePredicate = shape.get(triple.predicate);
@@ -101,6 +111,12 @@ export class Bindings implements IBindings {
                 const constraint = predicate.constraint;
                 if (constraint === undefined) {
                     this.bindings.set(triple.predicate, triple);
+                    this.shapePredicateBind.set(predicate.name, true);
+                    continue;
+                }
+
+                if(this.strict && !Bindings.validateCardinality(triple, predicate)){
+                    this.unboundTriple.push(triple);
                     continue;
                 }
 
@@ -113,8 +129,25 @@ export class Bindings implements IBindings {
                 }
 
                 this.bindings.set(triple.predicate, triple);
+                this.shapePredicateBind.set(predicate.name, true);
             }
 
+        }
+        if (!this.strict) {
+            for (const triple of negatedTriples) {
+                let hasBind = false;
+                for (const [predicate, isBind] of this.shapePredicateBind) {
+                    if (!isBind && !triple.negatedSet?.has(predicate)) {
+                        this.bindings.set(triple.predicate, triple);
+                        this.shapePredicateBind.set(predicate, true);
+                        hasBind = true;
+                        continue;
+                    }
+                }
+                if (!hasBind) {
+                    this.unboundTriple.push(triple);
+                }
+            }
         }
 
         if (shape.closed === false) {
@@ -122,7 +155,8 @@ export class Bindings implements IBindings {
         } else {
             let boundedUnion = true;
             for (const unionBinding of this.unionBindings) {
-                boundedUnion = unionBinding.hasOneContained && boundedUnion;
+                boundedUnion = ((unionBinding.hasOneContained && !this.strict) ||
+                    (this.strict && unionBinding.areAllContained)) && boundedUnion;
             }
             this.fullyBounded = this.unboundTriple.length === 0 && starPattern.starPattern.size !== 0 && boundedUnion;
         }
@@ -258,6 +292,15 @@ export class Bindings implements IBindings {
         }
 
         return false
+    }
+
+    private static validateCardinality(triple: ITriple, predicate: IPredicate): boolean {
+        if (triple.cardinality !== undefined && predicate.cardinality === undefined) {
+            return triple.cardinality.max === 1 && triple.cardinality.min === 1;
+        } else if (triple.cardinality !== undefined && predicate.cardinality !== undefined) {
+            return triple.cardinality.max <= predicate.cardinality.max;
+        }
+        return true;
     }
 
 
