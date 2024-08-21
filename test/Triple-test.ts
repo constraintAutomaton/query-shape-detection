@@ -13,6 +13,7 @@ describe('Triple', () => {
         subject: 'a',
         predicate: 'b',
         object: 'c',
+        cardinality: { min: 1, max: 1 }
       };
       const triple = new Triple(objectTriple);
 

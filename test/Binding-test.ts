@@ -3465,6 +3465,498 @@ describe('Bindings', () => {
         });
     });
 
+    describe('with negated triples', () => {
+        it('should have one binding', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: Triple.NEGATIVE_PREDICATE_SET,
+                negatedSet: new Set(['p1']),
+                object: [DF.namedNode('o0')]
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, triple]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should not binding', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: Triple.NEGATIVE_PREDICATE_SET,
+                negatedSet: new Set(['p']),
+                object: [DF.namedNode('o0')]
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, undefined]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape);
+
+            expect(bindings.isFullyBounded()).toBe(false);
+            expect(bindings.shouldVisitShape()).toBe(false);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([triple]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+    });
+
+    describe('strict', () => {
+        it('should have one binding with property path cardinality with a shape within a cardinality within it', () => {
+            const shape: Shape = new Shape(
+                {
+                    name: 'foo',
+                    positivePredicates: [{
+                        name: 'p0',
+                        cardinality: { max: -1, min: 2 }
+                    }],
+                    closed: true,
+                }
+            );
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')],
+                cardinality: { max: -1, min: 3 }
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, triple]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, [], true);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should have one binding with no property path cardinality', () => {
+            const shape: Shape = new Shape(
+                {
+                    name: 'foo',
+                    positivePredicates: [{
+                        name: 'p0',
+                    }],
+                    closed: true,
+                }
+            );
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')],
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, triple]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, [], true);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should have no binding with property path cardinality with a shape with a cardinality outside of it', () => {
+            const shape: Shape = new Shape(
+                {
+                    name: 'foo',
+                    positivePredicates: [{
+                        name: 'p0',
+                        cardinality: { max: 3, min: 2 }
+                    }],
+                    closed: true,
+                }
+            );
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')],
+                cardinality: { max: -1, min: 0 }
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, undefined]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, [], true);
+
+            expect(bindings.isFullyBounded()).toBe(false);
+            expect(bindings.shouldVisitShape()).toBe(false);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([triple]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should have no binding with property path cardinality bigger than one and a shape with undefined cardinality', () => {
+            const shape: Shape = new Shape(
+                {
+                    name: 'foo',
+                    positivePredicates: ['p0'],
+                    closed: true,
+                }
+            );
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')],
+                cardinality: { max: -1, min: 1 }
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, undefined]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, [], true);
+
+            expect(bindings.isFullyBounded()).toBe(false);
+            expect(bindings.shouldVisitShape()).toBe(false);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([triple]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should have one binding with property path cardinality of one and with shape within undefined cardinality', () => {
+            const shape: Shape = new Shape(
+                {
+                    name: 'foo',
+                    positivePredicates: ['p0'],
+                    closed: true,
+                }
+            );
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')],
+                cardinality: { max: 1, min: 1 }
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, triple]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, [], true);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should handle a satisfying union', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0", "p1", "p2"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple1: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')]
+            });
+            const triple2: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p1',
+                object: [DF.namedNode('o0')]
+            });
+            const triple3: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p2',
+                object: [DF.namedNode('o0')]
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        triple1.predicate,
+                        {
+                            triple: triple1,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple2.predicate,
+                        {
+                            triple: triple2,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple3.predicate,
+                        {
+                            triple: triple3,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+            const unionStarPattern: IStarPatternWithDependencies[][] = [
+                [
+                    {
+                        starPattern: new Map([
+                            [triple1.predicate,
+                            { triple: triple1 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ],
+                [
+                    {
+                        starPattern: new Map([
+                            [triple2.predicate,
+                            { triple: triple2 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ]
+            ];
+
+            const expectedBindings = new Map([
+                [triple1.predicate, triple1],
+                [triple2.predicate, triple2],
+                [triple3.predicate, triple3]
+            ]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, unionStarPattern, true);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple1, triple2, triple3]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
+        it('should handle a non-satisfying union', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0", "p1", "p2"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple1: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p0',
+                object: [DF.namedNode('o0')]
+            });
+            const triple2: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p1',
+                object: [DF.namedNode('o0')]
+            });
+            const triple3: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p2',
+                object: [DF.namedNode('o0')]
+            });
+
+            const triple4: Triple = new Triple({
+                subject: 'y',
+                predicate: 'p999',
+                object: [DF.namedNode('o0')]
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        triple1.predicate,
+                        {
+                            triple: triple1,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple2.predicate,
+                        {
+                            triple: triple2,
+                            dependencies: undefined
+                        }
+                    ],
+                    [
+                        triple3.predicate,
+                        {
+                            triple: triple3,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+            const unionStarPattern: IStarPatternWithDependencies[][] = [
+                [
+                    {
+                        starPattern: new Map([
+                            [triple1.predicate,
+                            { triple: triple1 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ],
+                [
+                    {
+                        starPattern: new Map([
+                            [triple4.predicate,
+                            { triple: triple4 }
+                            ]
+                        ]),
+                        name: "bar",
+                        isVariable: true
+                    }
+                ]
+            ];
+
+            const expectedBindings = new Map([
+                [triple1.predicate, triple1],
+                [triple2.predicate, triple2],
+                [triple3.predicate, triple3]
+            ]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape, unionStarPattern, true);
+
+            expect(bindings.isFullyBounded()).toBe(false);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple1, triple2, triple3]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+    });
+
     describe('solidbench problems', () => {
         test('interactive-complex-8 comment shape', async () => {
             const stringQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>

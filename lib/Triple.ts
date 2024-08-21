@@ -66,7 +66,7 @@ export class Triple implements ITriple {
   public readonly subject: string;
   public readonly object: Term | Term[];
   // the cardinality of the predicate
-  public readonly cardinality: ICardinality;
+  public readonly cardinality?: ICardinality;
   public readonly negatedSet?: Set<string>;
 
   /**
@@ -77,7 +77,7 @@ export class Triple implements ITriple {
     this.predicate = predicate;
     this.object = object;
     this.subject = subject;
-    this.cardinality = cardinality ?? { min: 1, max: 1 };
+    this.cardinality = cardinality;
     this.negatedSet = negative;
 
     Object.freeze(this.negatedSet);
@@ -97,6 +97,7 @@ export class Triple implements ITriple {
       subject: this.subject,
       predicate: this.predicate,
       object: this.object,
+      cardinality:this.cardinality
     };
   }
 

@@ -109,14 +109,15 @@ export class Bindings implements IBindings {
 
             for (const predicate of predicates) {
                 const constraint = predicate.constraint;
-                if (constraint === undefined) {
-                    this.bindings.set(triple.predicate, triple);
-                    this.shapePredicateBind.set(predicate.name, true);
+
+                if (this.strict && !Bindings.validateCardinality(triple, predicate)) {
+                    this.unboundTriple.push(triple);
                     continue;
                 }
 
-                if(this.strict && !Bindings.validateCardinality(triple, predicate)){
-                    this.unboundTriple.push(triple);
+                if (constraint === undefined) {
+                    this.bindings.set(triple.predicate, triple);
+                    this.shapePredicateBind.set(predicate.name, true);
                     continue;
                 }
 
@@ -297,10 +298,17 @@ export class Bindings implements IBindings {
     private static validateCardinality(triple: ITriple, predicate: IPredicate): boolean {
         if (triple.cardinality !== undefined && predicate.cardinality === undefined) {
             return triple.cardinality.max === 1 && triple.cardinality.min === 1;
-        } else if (triple.cardinality !== undefined && predicate.cardinality !== undefined) {
-            return triple.cardinality.max <= predicate.cardinality.max;
         }
-        return true;
+        const maxTripleCardinality = triple.cardinality?.max ?? 1;
+        const minTripleCardinality = triple.cardinality?.min ?? 1;
+
+        const maxPredicateCardinality = predicate.cardinality?.max ?? 1;
+        const minPredicateCardinality = predicate.cardinality?.min ?? 1;
+        
+        const withinMax: boolean = maxTripleCardinality===-1? maxPredicateCardinality===-1: maxTripleCardinality<= maxPredicateCardinality;
+        const withinMin:boolean = minTripleCardinality>=minPredicateCardinality;
+
+        return withinMax && withinMin;
     }
 
 
