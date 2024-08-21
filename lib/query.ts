@@ -39,7 +39,7 @@ export function generateStarPatternUnion(union: IQuery[][], starPatternName: str
  * @todo add support for the bind operator
  * @todo add support for optional property path
  */
-export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
+export function generateQuery(algebraQuery: Algebra.Operation, optional?: boolean): IQuery {
   const accumulatedTriples = new Map<string, IAccumulatedTriples>();
   // the binding value to the value
   const accumatedValues = new Map<string, Term[]>();
@@ -48,16 +48,11 @@ export function generateQuery(algebraQuery: Algebra.Operation): IQuery {
   Util.recurseOperation(
     algebraQuery,
     {
-      [Algebra.types.PATTERN]: QueryHandler.handlePattern(accumulatedTriples),
+      [Algebra.types.PATTERN]: QueryHandler.handlePattern(accumulatedTriples, optional),
       [Algebra.types.VALUES]: QueryHandler.handleValues(accumatedValues),
-      [Algebra.types.UNION]: QueryHandler.handleUnion(accumulatedUnion)
-    },
-  );
-
-  Util.recurseOperation(
-    algebraQuery,
-    {
-      [Algebra.types.PATH]: QueryHandler.handlePropertyPath(accumulatedTriples, accumulatedUnion, accumatedValues),
+      [Algebra.types.UNION]: QueryHandler.handleUnion(accumulatedUnion, optional),
+      [Algebra.types.LEFT_JOIN]: QueryHandler.handleLeftJoin(accumulatedTriples, accumatedValues, accumulatedUnion),
+      [Algebra.types.PATH]: QueryHandler.handlePropertyPath(accumulatedTriples, accumulatedUnion, accumatedValues, optional),
     },
   );
 
@@ -128,32 +123,69 @@ function addADependencyToStarPattern(tripleWithDependencies: ITripleWithDependen
 }
 
 namespace QueryHandler {
+
+  export function handleLeftJoin(accumulatedTriples: Map<string, IAccumulatedTriples>,
+    accumatedValues: Map<string, Term[]>,
+    accumulatedUnion: IQuery[][]): (element: any) => boolean {
+    return (element: any): boolean => {
+      const joinElement = element.input;
+      const requiredElements = joinElement[0];
+      const optionalElements = joinElement[1];
+
+      Util.recurseOperation(
+        requiredElements,
+        {
+          [Algebra.types.PATTERN]: QueryHandler.handlePattern(accumulatedTriples),
+          [Algebra.types.VALUES]: QueryHandler.handleValues(accumatedValues),
+          [Algebra.types.UNION]: QueryHandler.handleUnion(accumulatedUnion),
+          [Algebra.types.LEFT_JOIN]: QueryHandler.handleLeftJoin(accumulatedTriples, accumatedValues, accumulatedUnion),
+          [Algebra.types.PATH]: QueryHandler.handlePropertyPath(accumulatedTriples, accumulatedUnion, accumatedValues),
+        },
+      );
+
+
+      Util.recurseOperation(
+        optionalElements,
+        {
+          [Algebra.types.PATTERN]: QueryHandler.handlePattern(accumulatedTriples, true),
+          [Algebra.types.VALUES]: QueryHandler.handleValues(accumatedValues),
+          [Algebra.types.UNION]: QueryHandler.handleUnion(accumulatedUnion, true),
+          [Algebra.types.LEFT_JOIN]: QueryHandler.handleLeftJoin(accumulatedTriples, accumatedValues, accumulatedUnion),
+          [Algebra.types.PATH]: QueryHandler.handlePropertyPath(accumulatedTriples, accumulatedUnion, accumatedValues, true),
+        },
+      );
+      
+      return false;
+    }
+  }
+
   export function handlePropertyPath(
     accumulatedTriples: Map<string,
       IAccumulatedTriples>, accumulatedUnion: IQuery[][],
-    accumatedValues: Map<string, Term[]>
+    accumatedValues: Map<string, Term[]>,
+    optional?: boolean
   ): (element: any) => boolean {
     return (element: any): boolean => {
       const path = element.predicate.type;
       if (path === Algebra.types.ALT) {
-        accumulatedUnion.push(handleAltPropertyPath(element.subject, element.predicate.input, element.object, accumatedValues));
+        accumulatedUnion.push(handleAltPropertyPath(element.subject, element.predicate.input, element.object, accumatedValues, optional));
       } else if (isACardinalityPropertyPath(path)) {
-        const triple = handleCardinalityPropertyPath(element);
+        const triple = handleCardinalityPropertyPath(element, optional);
         handleDirectPropertyPath(element, accumulatedTriples, triple);
       } else if (path === Algebra.types.NPS) {
-        const triple = handleNegatedPropertySet(element);
+        const triple = handleNegatedPropertySet(element, optional);
         handleDirectPropertyPath(element, accumulatedTriples, triple);
       }
       return false;
     };
   }
 
-  export function handleUnion(accumulatedUnion: IQuery[][]): (element: any) => boolean {
+  export function handleUnion(accumulatedUnion: IQuery[][], optional?: boolean): (element: any) => boolean {
     return (element: any): boolean => {
       const branches: any[] = element.input;
       const currentUnion: IQuery[] = [];
       for (const branch of branches) {
-        currentUnion.push(generateQuery(branch))
+        currentUnion.push(generateQuery(branch, optional))
       }
       accumulatedUnion.push(currentUnion);
       return false;
@@ -178,7 +210,7 @@ namespace QueryHandler {
     }
   }
 
-  export function handlePattern(accumulatedTriples: Map<string, IAccumulatedTriples>): (element: any) => boolean {
+  export function handlePattern(accumulatedTriples: Map<string, IAccumulatedTriples>, optional?: boolean): (element: any) => boolean {
     return (quad: any): boolean => {
       const subject = quad.subject as Term;
       const predicate = quad.predicate as Term;
@@ -189,6 +221,7 @@ namespace QueryHandler {
           subject: subject.value,
           predicate: quad.predicate.value,
           object,
+          isOptional: optional
         });
         if (startPattern === undefined) {
           accumulatedTriples.set(subject.value,
@@ -201,7 +234,7 @@ namespace QueryHandler {
     };
   }
 
-  function handleCardinalityPropertyPath(element: any): { triple: ITriple, isVariable: boolean } | undefined {
+  function handleCardinalityPropertyPath(element: any, optional?: boolean): { triple: ITriple, isVariable: boolean } | undefined {
     const subject = element.subject as Term;
     const object = element.object as Term;
     const predicate = element.predicate.path.iri;
@@ -220,7 +253,7 @@ namespace QueryHandler {
     }
     if (cardinality) {
       return {
-        triple: new Triple({ subject: subject.value, predicate: predicate.value, object: object, cardinality }),
+        triple: new Triple({ subject: subject.value, predicate: predicate.value, object: object, cardinality, isOptional: optional }),
         isVariable: subject.termType === "Variable"
       };
     }
@@ -247,24 +280,24 @@ namespace QueryHandler {
       predicateType === Algebra.types.ONE_OR_MORE_PATH;
   }
 
-  function handleAltPropertyPath(subject: Term, predicates: any[], object: Term, accumatedValues: Map<string, Term[]>): IQuery[] {
+  function handleAltPropertyPath(subject: Term, predicates: any[], object: Term, accumatedValues: Map<string, Term[]>, optional?: boolean): IQuery[] {
     const union: IQuery[] = [];
     for (const path of predicates) {
       const cardinality = getCardinality(path.type);
       if (cardinality !== undefined) {
-        union.push(handleLinkQuery(path.path, accumatedValues, subject, object, cardinality));
+        union.push(handleLinkQuery(path.path, accumatedValues, subject, object, cardinality, optional));
       } else if (path.type === Algebra.types.LINK) {
-        union.push(handleLinkQuery(path, accumatedValues, subject, object));
+        union.push(handleLinkQuery(path, accumatedValues, subject, object, undefined, optional));
       } else if (path.type === Algebra.types.SEQ) {
-        union.push(handleSeqPath(path, accumatedValues, subject, object));
+        union.push(handleSeqPath(path, accumatedValues, subject, object, optional));
       } else if (path.type === Algebra.types.NPS) {
-        union.push(handleNegatedPropertyQuery(path, accumatedValues, subject, object));
+        union.push(handleNegatedPropertyQuery(path, accumatedValues, subject, object, optional));
       }
     }
     return union;
   }
 
-  function handleSeqPath(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term): IQuery {
+  function handleSeqPath(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term, optional?: boolean): IQuery {
     const predicates = element.input;
     const accumulatedTriples = new Map<string, IAccumulatedTriples>();
     const accumulatedUnion: IQuery[][] = [];
@@ -278,11 +311,11 @@ namespace QueryHandler {
       currentObject = i === predicates.length - 1 ? object : DF.blankNode(`${path.iri.value}_${subject.value}`);
 
       if (path.type === Algebra.types.LINK) {
-        handleLink(path, accumulatedTriples, currentSubject, currentObject);
+        handleLink(path, accumulatedTriples, currentSubject, currentObject, undefined, optional);
       } else if (path.type === Algebra.types.NPS) {
-        handleNegatedPropertyLink(path, accumulatedTriples, currentSubject, currentObject)
+        handleNegatedPropertyLink(path, accumulatedTriples, currentSubject, currentObject, optional)
       } else if (path.type === Algebra.types.ALT) {
-        accumulatedUnion.push(handleAltPropertyPath(currentSubject, path.input, currentObject, accumatedValues));
+        accumulatedUnion.push(handleAltPropertyPath(currentSubject, path.input, currentObject, accumatedValues, optional));
       }
     }
 
@@ -303,12 +336,13 @@ namespace QueryHandler {
     }
   }
 
-  function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality): void {
+  function handleLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, cardinality?: ICardinality, optional?: boolean): void {
     const triple: ITriple = new Triple({
       subject: subject.value,
       predicate: element.iri.value,
       object,
-      cardinality
+      cardinality,
+      isOptional: optional
     });
 
     accumulatedTriples.set(subject.value,
@@ -318,13 +352,13 @@ namespace QueryHandler {
       });
   }
 
-  function handleLinkQuery(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term, cardinality?: ICardinality): IQuery {
+  function handleLinkQuery(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term, cardinality?: ICardinality, optional?: boolean): IQuery {
     const accumulatedTriples = new Map<string, IAccumulatedTriples>();
-    handleLink(element, accumulatedTriples, subject, object, cardinality);
+    handleLink(element, accumulatedTriples, subject, object, cardinality, optional);
     return buildQuery(accumulatedTriples, accumatedValues, []);
   }
 
-  function handleNegatedPropertyLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term): void {
+  function handleNegatedPropertyLink(element: any, accumulatedTriples: Map<string, IAccumulatedTriples>, subject: Term, object: Term, optional?: boolean): void {
     const predicates = element.iris;
     const negatedSet = new Set<string>();
     for (const predicate of predicates) {
@@ -335,7 +369,8 @@ namespace QueryHandler {
       subject: subject.value,
       predicate: Triple.NEGATIVE_PREDICATE_SET,
       object,
-      negatedSet
+      negatedSet,
+      isOptional: optional
     });
 
     accumulatedTriples.set(subject.value,
@@ -345,13 +380,13 @@ namespace QueryHandler {
       });
   }
 
-  function handleNegatedPropertyQuery(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term): IQuery {
+  function handleNegatedPropertyQuery(element: any, accumatedValues: Map<string, Term[]>, subject: Term, object: Term, optional?: boolean): IQuery {
     const accumulatedTriples = new Map<string, IAccumulatedTriples>();
-    handleNegatedPropertyLink(element, accumulatedTriples, subject, object);
+    handleNegatedPropertyLink(element, accumulatedTriples, subject, object, optional);
     return buildQuery(accumulatedTriples, accumatedValues, []);
   }
 
-  function handleNegatedPropertySet(element: any): { triple: ITriple, isVariable: boolean } | undefined {
+  function handleNegatedPropertySet(element: any, optional?: boolean): { triple: ITriple, isVariable: boolean } | undefined {
     const subject = element.subject as Term;
     const object = element.object as Term;
     const predicates = element.predicate.iris;
@@ -365,7 +400,8 @@ namespace QueryHandler {
         subject: subject.value,
         predicate: Triple.NEGATIVE_PREDICATE_SET,
         object: object,
-        negatedSet: negatedSet
+        negatedSet: negatedSet,
+        isOptional: optional
       }),
       isVariable: subject.termType === "Variable"
     };

@@ -283,7 +283,8 @@ describe('query', () => {
                   triple: new Triple({
                     subject: 'xo',
                     predicate: 'http://exemple.be',
-                    object: DF.literal('1', RDF_STRING)
+                    object: DF.literal('1', RDF_STRING),
+                    isOptional:true
                   }),
                   dependencies: undefined
                 }
@@ -304,7 +305,8 @@ describe('query', () => {
                   triple: new Triple({
                     subject: 'yo',
                     predicate: 'http://exemple.be',
-                    object: DF.literal('2', RDF_STRING)
+                    object: DF.literal('2', RDF_STRING),
+                    isOptional:true
                   }),
                   dependencies: undefined
                 }
@@ -1209,7 +1211,8 @@ describe('query', () => {
                     triple: new Triple({
                       subject: 'originalPostInner',
                       predicate: RDF_TYPE,
-                      object: DF.namedNode('http://exemple.be#Post')
+                      object: DF.namedNode('http://exemple.be#Post'),
+                      isOptional:true
                     }),
                     dependencies: undefined
                   }
@@ -1232,7 +1235,7 @@ describe('query', () => {
                     triple: new Triple({
                       subject: 'message',
                       predicate: 'http://exemple.be#id',
-                      object: DF.variable('id')
+                      object: DF.variable('id'),
                     }),
                     dependencies: undefined
                   }
@@ -1244,7 +1247,8 @@ describe('query', () => {
                       subject: 'message',
                       predicate: 'http://exemple.be#replyOf',
                       object: DF.variable('originalPostInner'),
-                      cardinality: { min: 0, max: -1 }
+                      cardinality: { min: 0, max: -1 },
+                      isOptional:true
                     }),
                     dependencies: originalPostInnerPattern[1]
                   }
@@ -1296,7 +1300,8 @@ describe('query', () => {
                     triple: new Triple({
                       subject: 'originalPostInner',
                       predicate: RDF_TYPE,
-                      object: DF.namedNode('http://exemple.be#Post')
+                      object: DF.namedNode('http://exemple.be#Post'),
+                      isOptional:true
                     }),
                     dependencies: undefined
                   }
@@ -1331,7 +1336,8 @@ describe('query', () => {
                       subject: 'message',
                       predicate: 'http://exemple.be#replyOf',
                       object: DF.variable('originalPostInner'),
-                      cardinality: { min: 1, max: -1 }
+                      cardinality: { min: 1, max: -1 },
+                      isOptional:true
                     }),
                     dependencies: originalPostInnerPattern[1]
                   }
@@ -1383,7 +1389,8 @@ describe('query', () => {
                     triple: new Triple({
                       subject: 'originalPostInner',
                       predicate: RDF_TYPE,
-                      object: DF.namedNode('http://exemple.be#Post')
+                      object: DF.namedNode('http://exemple.be#Post'),
+                      isOptional:true
                     }),
                     dependencies: undefined
                   }
@@ -1418,7 +1425,8 @@ describe('query', () => {
                       subject: 'message',
                       predicate: 'http://exemple.be#replyOf',
                       object: DF.variable('originalPostInner'),
-                      cardinality: { min: 0, max: 1 }
+                      cardinality: { min: 0, max: 1 },
+                      isOptional:true
                     }),
                     dependencies: originalPostInnerPattern[1]
                   }

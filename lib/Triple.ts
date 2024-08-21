@@ -68,21 +68,24 @@ export class Triple implements ITriple {
   // the cardinality of the predicate
   public readonly cardinality?: ICardinality;
   public readonly negatedSet?: Set<string>;
+  public readonly isOptional: boolean;
 
   /**
    *
    * @param {ITripleArgs} tripleObject - A triple object
    */
-  public constructor({ subject, predicate, object, cardinality, negatedSet: negative }: ITripleArgs) {
+  public constructor({ subject, predicate, object, cardinality, negatedSet: negative, isOptional }: ITripleArgs) {
     this.predicate = predicate;
     this.object = object;
     this.subject = subject;
     this.cardinality = cardinality;
     this.negatedSet = negative;
+    this.isOptional = isOptional ?? false;
 
     Object.freeze(this.negatedSet);
     Object.freeze(this.cardinality);
     Object.freeze(this.predicate);
+    Object.freeze(this.isOptional);
     Object.freeze(this.object);
     Object.freeze(this.subject);
     Object.freeze(this);
@@ -97,7 +100,8 @@ export class Triple implements ITriple {
       subject: this.subject,
       predicate: this.predicate,
       object: this.object,
-      cardinality:this.cardinality
+      cardinality: this.cardinality,
+      isOptional:this.isOptional
     };
   }
 
