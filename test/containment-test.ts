@@ -623,100 +623,6 @@ describe('solveShapeQueryContainment', () => {
                 expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
             });
 
-            test('interactive-short-2', async ()=>{
-                const queryString = `
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-                PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
-                PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
-                PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
-                PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-                PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
-                PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
-
-                SELECT
-                    ?messageId
-                    ?messageCreationDate
-                    ?messageContent
-                WHERE
-                {
-                    ?message snvoc:hasCreator ?person;
-                        snvoc:content ?messageContent;
-                        snvoc:creationDate ?messageCreationDate;
-                        snvoc:id ?messageId.
-                    { ?message rdf:type snvoc:Post } UNION { ?message rdf:type snvoc:Comment }
-                }
-                `;
-                const querySparql = translate(queryString);
-                const query = generateQuery(querySparql);
-    
-                const shapeIndexed: Map<string, IShape> = await generateSolidBenchShapes();
-                const shapes: IShape[] = Array.from(shapeIndexed.values());
-    
-                const resp = solveShapeQueryContainment({ query, shapes });
-    
-                const conditionalLink: IConditionalLink[] = [];
-                const visitShapeBoundedResource = new Map([
-                    ["http://example.com#Comment", true],
-                    ["http://example.com#Post", true],
-                    ["http://example.com#Profile", true]
-                ]);
-                const starPatternsContainment = new Map<StarPatternName, IContainmentResult>([
-                    ["message", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment", "http://example.com#Post"] }],
-                ]);
-    
-    
-                expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
-            });
-            
-            test('interactive-short-3', async ()=>{
-                const queryString = `
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-                PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
-                PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
-                PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
-                PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-                PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
-                PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
-
-                SELECT
-                    ?messageId
-                    ?messageCreationDate
-                    ?messageContent
-                WHERE
-                {
-                    ?message snvoc:hasCreator ?person;
-                        snvoc:content ?messageContent;
-                        snvoc:creationDate ?messageCreationDate;
-                        snvoc:id ?messageId.
-                    { ?message rdf:type snvoc:Post } UNION { ?message rdf:type snvoc:Comment }
-                }
-                `;
-                const querySparql = translate(queryString);
-                const query = generateQuery(querySparql);
-    
-                const shapeIndexed: Map<string, IShape> = await generateSolidBenchShapes();
-                const shapes: IShape[] = Array.from(shapeIndexed.values());
-    
-                const resp = solveShapeQueryContainment({ query, shapes });
-    
-                const conditionalLink: IConditionalLink[] = [];
-                const visitShapeBoundedResource = new Map([
-                    ["http://example.com#Comment", true],
-                    ["http://example.com#Post", true],
-                    ["http://example.com#Profile", true]
-                ]);
-                const starPatternsContainment = new Map<StarPatternName, IContainmentResult>([
-                    ["message", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment", "http://example.com#Post"] }],
-                ]);
-    
-    
-                expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
-            });
-
             test('interactive-short-4', async ()=>{
                 const queryString = `
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -826,7 +732,54 @@ describe('solveShapeQueryContainment', () => {
     
                 expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
             });
+
+            test('interactive-discover-2', async ()=>{
+                const queryString = `
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+                PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+                PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+                PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+                PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+                PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+                SELECT
+                    ?messageId
+                    ?messageCreationDate
+                    ?messageContent
+                WHERE
+                {
+                    ?message snvoc:hasCreator ?person;
+                        snvoc:content ?messageContent;
+                        snvoc:creationDate ?messageCreationDate;
+                        snvoc:id ?messageId.
+                    { ?message rdf:type snvoc:Post } UNION { ?message rdf:type snvoc:Comment }
+                }
+                `;
+                const querySparql = translate(queryString);
+                const query = generateQuery(querySparql);
     
+                const shapeIndexed: Map<string, IShape> = await generateSolidBenchShapes();
+                const shapes: IShape[] = Array.from(shapeIndexed.values());
+    
+                const resp = solveShapeQueryContainment({ query, shapes });
+    
+                const conditionalLink: IConditionalLink[] = [];
+                const visitShapeBoundedResource = new Map([
+                    ["http://example.com#Comment", true],
+                    ["http://example.com#Post", true],
+                    ["http://example.com#Profile", true]
+                ]);
+                const starPatternsContainment = new Map<StarPatternName, IContainmentResult>([
+                    ["message", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment", "http://example.com#Post"] }],
+                ]);
+    
+    
+                expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
+            });
+
             test('interactive-discover-3', async () => {
                 const queryString = `PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
                 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
