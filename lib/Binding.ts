@@ -93,6 +93,7 @@ export class Bindings implements IBindings {
             }
             const singlePredicate = shape.get(triple.predicate);
             let predicates: IPredicate[] = [];
+            // check if the triple match a disjunction
             for (const oneOfBinding of this.oneOfs) {
                 const predicatesOneOf = oneOfBinding.get(triple.predicate);
                 if (predicatesOneOf !== undefined) {
@@ -110,7 +111,7 @@ export class Bindings implements IBindings {
             for (const predicate of predicates) {
                 const constraint = predicate.constraint;
 
-                if (this.strict && !Bindings.validateCardinality(triple, predicate)) {
+                if (this.strict && !this.validateCardinality(triple, predicate)) {
                     this.unboundTriple.push(triple);
                     continue;
                 }
@@ -128,12 +129,19 @@ export class Bindings implements IBindings {
                 if (this.handleShapeType(constraint, triple)) {
                     continue;
                 }
-
+                // all the constraint are valid so we can skip the rest of the predicate with the same IRI but
+                // possible different constraints.
                 this.bindings.set(triple.predicate, triple);
                 this.shapePredicateBind.set(predicate.name, true);
+                break;
+            }
+            if(!this.strict && triple.isOptional === true){
+                this.bindings.set(triple.predicate, triple);
             }
 
         }
+        // negative triple in a strict containment mean that the we can take any values
+        // see paper https://link.springer.com/chapter/10.1007/978-3-319-25007-6_1
         if (!this.strict) {
             for (const triple of negatedTriples) {
                 let hasBind = false;
@@ -295,7 +303,7 @@ export class Bindings implements IBindings {
         return false
     }
 
-    private static validateCardinality(triple: ITriple, predicate: IPredicate): boolean {
+    private validateCardinality(triple: ITriple, predicate: IPredicate): boolean {
         if (triple.cardinality !== undefined && predicate.cardinality === undefined) {
             return triple.cardinality.max === 1 && triple.cardinality.min === 1;
         }
@@ -304,18 +312,16 @@ export class Bindings implements IBindings {
 
         const maxPredicateCardinality = predicate.cardinality?.max ?? 1;
         const minPredicateCardinality = predicate.cardinality?.min ?? 1;
-        
-        const withinMax: boolean = maxTripleCardinality===-1? maxPredicateCardinality===-1: maxTripleCardinality<= maxPredicateCardinality;
-        const withinMin:boolean = minTripleCardinality>=minPredicateCardinality;
+
+        const withinMax: boolean = maxTripleCardinality === -1 ? maxPredicateCardinality === -1 : maxTripleCardinality <= maxPredicateCardinality;
+        const withinMin: boolean = minTripleCardinality >= minPredicateCardinality;
 
         return withinMax && withinMin;
     }
 
-
     public isFullyBounded(): boolean {
         return this.fullyBounded;
     }
-
 
     public getUnboundedTriple(): ITriple[] {
         return new Array(...this.unboundTriple);
@@ -338,6 +344,7 @@ export class Bindings implements IBindings {
     public shouldVisitShape(): boolean {
         return this.getBoundTriple().length > 0;
     }
+
     public getNestedContainedStarPatternName(): IDependentStarPattern[] {
         return this.nestedContainedStarPatternName;
     }
