@@ -111,7 +111,7 @@ export class Bindings implements IBindings {
             for (const predicate of predicates) {
                 const constraint = predicate.constraint;
 
-                if (this.strict && !this.validateCardinality(triple, predicate)) {
+                if (this.strict && !Bindings.validateCardinality(triple, predicate)) {
                     this.unboundTriple.push(triple);
                     continue;
                 }
@@ -303,7 +303,7 @@ export class Bindings implements IBindings {
         return false
     }
 
-    private validateCardinality(triple: ITriple, predicate: IPredicate): boolean {
+    private static validateCardinality(triple: ITriple, predicate: IPredicate): boolean {
         if (triple.cardinality !== undefined && predicate.cardinality === undefined) {
             return triple.cardinality.max === 1 && triple.cardinality.min === 1;
         }

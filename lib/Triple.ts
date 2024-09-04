@@ -81,6 +81,9 @@ export class Triple implements ITriple {
     this.cardinality = cardinality;
     this.negatedSet = negative;
     this.isOptional = isOptional ?? false;
+    if (this.cardinality !== undefined && this.cardinality.min === 0) {
+      this.isOptional = true;
+    }
 
     Object.freeze(this.negatedSet);
     Object.freeze(this.cardinality);
@@ -101,7 +104,7 @@ export class Triple implements ITriple {
       predicate: this.predicate,
       object: this.object,
       cardinality: this.cardinality,
-      isOptional:this.isOptional
+      isOptional: this.isOptional
     };
   }
 
