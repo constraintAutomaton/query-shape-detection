@@ -1584,340 +1584,539 @@ describe('query', () => {
       });
 
       describe('multiple property path', () => {
-        it('alternative with sequence', () => {
-          const query = `PREFIX snvoc: <http://exemple.be#>
+
+        describe("sequence", () => {
+          test('alternative with sequence', () => {
+            const query = `PREFIX snvoc: <http://exemple.be#>
+  
+              SELECT
+                  *
+              WHERE {
+                  ?message (snvoc:test1/snvoc:test2)|snvoc:test3 ?foo .
+            }`;
+
+            const resp = generateQuery(translate(query));
+
+            const test1seq1 = DF.blankNode("http://exemple.be#test1_message");
+            const test1Seq1StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test1',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test1',
+                        object: test1seq1,
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
+
+            const test1Seq2StarPattern: [string, IStarPatternWithDependencies] = [
+              test1seq1.value,
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test2',
+                    {
+                      triple: new Triple({
+                        subject: test1seq1.value,
+                        predicate: 'http://exemple.be#test2',
+                        object: DF.variable('foo')
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: test1seq1.value,
+                isVariable: false,
+              }
+            ];
+
+
+            const starPatternUnionOption1 = new Map([test1Seq1StarPattern, test1Seq2StarPattern]);
+
+            const test3StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test3',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test3',
+                        object: DF.variable("foo")
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
+
+            const starPatternUnionOption2 = new Map([test3StarPattern]);
+
+            const expectedQueries = [
+              starPatternUnionOption1,
+              starPatternUnionOption2
+            ];
+
+            expect(resp.starPatterns.size).toBe(0);
+            expect(resp.union).toBeDefined();
+            const union = resp.union!
+            expect(union.length).toBe(1);
+            const unionQueries = union[0];
+            expect(unionQueries.length).toBe(2);
+
+            for (let i = 0; i < unionQueries.length; i++) {
+              const unionQuery = unionQueries[i];
+              const expectedStarPattern = expectedQueries[i];
+              expect(unionQuery.starPatterns.size).toBe(expectedStarPattern.size);
+              for (const [subject, starPatterns] of unionQuery.starPatterns) {
+                expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+              }
+            }
+
+          });
+
+          test('alternative with sequence containing negated predicates', () => {
+            const query = `PREFIX snvoc: <http://exemple.be#>
+  
+              SELECT
+                  *
+              WHERE {
+                  ?message (snvoc:test1/!snvoc:test2)|snvoc:test3? ?foo .
+            }`;
+
+            const resp = generateQuery(translate(query));
+
+            const test1seq1 = DF.blankNode("http://exemple.be#test1_message");
+            const test1Seq1StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test1',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test1',
+                        object: test1seq1,
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
+
+            const test1Seq2StarPattern: [string, IStarPatternWithDependencies] = [
+              test1seq1.value,
+              {
+                starPattern: new Map([
+                  [
+                    Triple.NEGATIVE_PREDICATE_SET,
+                    {
+                      triple: new Triple({
+                        subject: test1seq1.value,
+                        predicate: Triple.NEGATIVE_PREDICATE_SET,
+                        negatedSet: new Set(['http://exemple.be#test2']),
+                        object: DF.variable('foo')
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: test1seq1.value,
+                isVariable: false,
+              }
+            ];
+
+
+            const starPatternUnionOption1 = new Map([test1Seq1StarPattern, test1Seq2StarPattern]);
+
+            const test3StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test3',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test3',
+                        object: DF.variable("foo"),
+                        cardinality: { min: 0, max: 1 }
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
+
+            const starPatternUnionOption2 = new Map([test3StarPattern]);
+
+            const expectedQueries = [
+              starPatternUnionOption1,
+              starPatternUnionOption2
+            ];
+
+            expect(resp.starPatterns.size).toBe(0);
+            expect(resp.union).toBeDefined();
+            const union = resp.union!
+            expect(union.length).toBe(1);
+            const unionQueries = union[0];
+            expect(unionQueries.length).toBe(2);
+
+            for (let i = 0; i < unionQueries.length; i++) {
+              const unionQuery = unionQueries[i];
+              const expectedStarPattern = expectedQueries[i];
+              expect(unionQuery.starPatterns.size).toBe(expectedStarPattern.size);
+              for (const [subject, starPatterns] of unionQuery.starPatterns) {
+                expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
+              }
+            }
+
+          });
+
+          test('alternative with sequence containing alternative', () => {
+            const query = `PREFIX snvoc: <http://exemple.be#>
+  
+              SELECT
+                  *
+              WHERE {
+                  ?message (snvoc:test1/(snvoc:test2|snvoc:test4*))|snvoc:test3 ?foo .
+            }`;
+
+            const resp = generateQuery(translate(query));
+
+            const test1seq1 = DF.blankNode("http://exemple.be#test1_message");
+            const test1Seq1StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test1',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test1',
+                        object: test1seq1,
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
+
+            const test2StarPattern: [string, IStarPatternWithDependencies] = [
+              test1seq1.value,
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test2',
+                    {
+                      triple: new Triple({
+                        subject: test1seq1.value,
+                        predicate: 'http://exemple.be#test2',
+                        object: DF.variable('foo')
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: test1seq1.value,
+                isVariable: false,
+              }
+            ];
+
+            const test4StarPattern: [string, IStarPatternWithDependencies] = [
+              test1seq1.value,
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test4',
+                    {
+                      triple: new Triple({
+                        subject: test1seq1.value,
+                        predicate: 'http://exemple.be#test4',
+                        cardinality: { min: 0, max: -1 },
+                        object: DF.variable('foo')
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: test1seq1.value,
+                isVariable: false,
+              }
+            ];
+
+            const starPatternUnionOption1 = new Map([test1Seq1StarPattern]);
+
+            const test3StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test3',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test3',
+                        object: DF.variable("foo")
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
+
+            const starPatternUnionOption2 = new Map([test3StarPattern]);
+
+
+            expect(resp.starPatterns.size).toBe(0);
+            expect(resp.union).toBeDefined();
+            const union = resp.union!
+            expect(union.length).toBe(1);
+            const unionQueries = union[0];
+            expect(unionQueries.length).toBe(2);
+
+            const firstBranch = unionQueries[0];
+            const secondBranch = unionQueries[1];
+
+            expect(firstBranch.starPatterns).toStrictEqual(starPatternUnionOption1);
+
+            expect(secondBranch.starPatterns).toStrictEqual(starPatternUnionOption2);
+
+            expect(firstBranch.union).toBeDefined();
+            const nestedFirstBranchUnion = firstBranch.union!;
+            expect(nestedFirstBranchUnion.length).toBe(1);
+            const nestedFirstQueriesUnion = nestedFirstBranchUnion[0];
+            expect(nestedFirstQueriesUnion.length).toBe(2);
+            nestedFirstQueriesUnion[0].starPatterns = new Map([test2StarPattern]);
+            expect(nestedFirstQueriesUnion[0].union).toBeUndefined();
+            nestedFirstQueriesUnion[1].starPatterns = new Map([test4StarPattern]);
+            expect(nestedFirstQueriesUnion[1].union).toBeUndefined();
+          });
+        });
+
+        describe("inverse", () => {
+          test("alternate with a single inverse path", () => {
+            const query = `
+            PREFIX snvoc: <http://exemple.be#>
 
             SELECT
                 *
             WHERE {
-                ?message (snvoc:test1/snvoc:test2)|snvoc:test3 ?foo .
+                ?message snvoc:test1|^snvoc:test2+ ?fr .
           }`;
 
-          const resp = generateQuery(translate(query));
+            const resp = generateQuery(translate(query));
 
-          const test1seq1 = DF.blankNode("http://exemple.be#test1_message");
-          const test1Seq1StarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test1',
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: 'http://exemple.be#test1',
-                      object: test1seq1,
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
+            const test1StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test1',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test1',
+                        object: DF.variable("fr"),
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
 
-          const test1Seq2StarPattern: [string, IStarPatternWithDependencies] = [
-            test1seq1.value,
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test2',
-                  {
-                    triple: new Triple({
-                      subject: test1seq1.value,
-                      predicate: 'http://exemple.be#test2',
-                      object: DF.variable('foo')
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: test1seq1.value,
-              isVariable: false,
-            }
-          ];
+            const test2StarPattern: [string, IStarPatternWithDependencies] = [
+              'fr',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test2',
+                    {
+                      triple: new Triple({
+                        subject: 'fr',
+                        predicate: 'http://exemple.be#test2',
+                        cardinality:{min:1, max:-1},
+                        object: DF.variable("message"),
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "fr",
+                isVariable: true,
+              }
+            ];
 
+            expect(resp.starPatterns.size).toBe(0);
+            expect(resp.union).toBeDefined();
+            const union = resp.union!
+            expect(union.length).toBe(1);
+            const unionQueries = union[0];
+            expect(unionQueries.length).toBe(2);
 
-          const starPatternUnionOption1 = new Map([test1Seq1StarPattern, test1Seq2StarPattern]);
+            const firstBranch = unionQueries[0];
+            const secondBranch = unionQueries[1];
 
-          const test3StarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test3',
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: 'http://exemple.be#test3',
-                      object: DF.variable("foo")
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
+            expect(firstBranch.starPatterns).toStrictEqual(new Map([test1StarPattern]));
+            expect(secondBranch.starPatterns).toStrictEqual(new Map([test2StarPattern]));
 
-          const starPatternUnionOption2 = new Map([test3StarPattern]);
+            expect(firstBranch.union).toBeUndefined();
+            expect(secondBranch.union).toBeUndefined();
+          });
 
-          const expectedQueries = [
-            starPatternUnionOption1,
-            starPatternUnionOption2
-          ];
-
-          expect(resp.starPatterns.size).toBe(0);
-          expect(resp.union).toBeDefined();
-          const union = resp.union!
-          expect(union.length).toBe(1);
-          const unionQueries = union[0];
-          expect(unionQueries.length).toBe(2);
-
-          for (let i = 0; i < unionQueries.length; i++) {
-            const unionQuery = unionQueries[i];
-            const expectedStarPattern = expectedQueries[i];
-            expect(unionQuery.starPatterns.size).toBe(expectedStarPattern.size);
-            for (const [subject, starPatterns] of unionQuery.starPatterns) {
-              expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
-            }
-          }
-
-        });
-
-        it('alternative with sequence containing negated predicates', () => {
-          const query = `PREFIX snvoc: <http://exemple.be#>
+          test("alternate with multiple inverse paths", () => {
+            const query = `
+            PREFIX snvoc: <http://exemple.be#>
 
             SELECT
                 *
             WHERE {
-                ?message (snvoc:test1/!snvoc:test2)|snvoc:test3? ?foo .
+                ?message (snvoc:test1|^(snvoc:test2|snvoc:test3+|snvoc:test4*)) ?fr .
           }`;
 
-          const resp = generateQuery(translate(query));
+            const resp = generateQuery(translate(query));
 
-          const test1seq1 = DF.blankNode("http://exemple.be#test1_message");
-          const test1Seq1StarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test1',
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: 'http://exemple.be#test1',
-                      object: test1seq1,
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
+            const test1StarPattern: [string, IStarPatternWithDependencies] = [
+              'message',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test1',
+                    {
+                      triple: new Triple({
+                        subject: 'message',
+                        predicate: 'http://exemple.be#test1',
+                        object: DF.variable("fr"),
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "message",
+                isVariable: true,
+              }
+            ];
 
-          const test1Seq2StarPattern: [string, IStarPatternWithDependencies] = [
-            test1seq1.value,
-            {
-              starPattern: new Map([
-                [
-                  Triple.NEGATIVE_PREDICATE_SET,
-                  {
-                    triple: new Triple({
-                      subject: test1seq1.value,
-                      predicate: Triple.NEGATIVE_PREDICATE_SET,
-                      negatedSet: new Set(['http://exemple.be#test2']),
-                      object: DF.variable('foo')
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: test1seq1.value,
-              isVariable: false,
-            }
-          ];
+            const test2StarPattern: [string, IStarPatternWithDependencies] = [
+              'fr',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test2',
+                    {
+                      triple: new Triple({
+                        subject: 'fr',
+                        predicate: 'http://exemple.be#test2',
+                        object: DF.variable("message"),
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "fr",
+                isVariable: true,
+              }
+            ];
 
+            const test3StarPattern: [string, IStarPatternWithDependencies] = [
+              'fr',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test3',
+                    {
+                      triple: new Triple({
+                        subject: 'fr',
+                        predicate: 'http://exemple.be#test3',
+                        cardinality:{min:1, max:-1},
+                        object: DF.variable("message"),
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "fr",
+                isVariable: true,
+              }
+            ];
 
-          const starPatternUnionOption1 = new Map([test1Seq1StarPattern, test1Seq2StarPattern]);
+            const test4StarPattern: [string, IStarPatternWithDependencies] = [
+              'fr',
+              {
+                starPattern: new Map([
+                  [
+                    'http://exemple.be#test4',
+                    {
+                      triple: new Triple({
+                        subject: 'fr',
+                        predicate: 'http://exemple.be#test4',
+                        cardinality:{min:0, max:-1},
+                        object: DF.variable("message"),
+                      }),
+                      dependencies: undefined
+                    }
+                  ],
+                ]),
+                name: "fr",
+                isVariable: true,
+              }
+            ];
 
-          const test3StarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test3',
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: 'http://exemple.be#test3',
-                      object: DF.variable("foo"),
-                      cardinality: { min: 0, max: 1 }
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
+            expect(resp.starPatterns.size).toBe(0);
+            expect(resp.union).toBeDefined();
+            const union = resp.union!
+            expect(union.length).toBe(1);
+            const unionQueries = union[0];
+            expect(unionQueries.length).toBe(4);
 
-          const starPatternUnionOption2 = new Map([test3StarPattern]);
+            const firstBranch = unionQueries[0];
+            const secondBranch = unionQueries[1];
+            const thirdBranch = unionQueries[2];
+            const forthBranch = unionQueries[3];
 
-          const expectedQueries = [
-            starPatternUnionOption1,
-            starPatternUnionOption2
-          ];
+            expect(firstBranch.starPatterns).toStrictEqual(new Map([test1StarPattern]));
+            expect(secondBranch.starPatterns).toStrictEqual(new Map([test2StarPattern]));
+            expect(thirdBranch.starPatterns).toStrictEqual(new Map([test3StarPattern]));
+            expect(forthBranch.starPatterns).toStrictEqual(new Map([test4StarPattern]));
 
-          expect(resp.starPatterns.size).toBe(0);
-          expect(resp.union).toBeDefined();
-          const union = resp.union!
-          expect(union.length).toBe(1);
-          const unionQueries = union[0];
-          expect(unionQueries.length).toBe(2);
-
-          for (let i = 0; i < unionQueries.length; i++) {
-            const unionQuery = unionQueries[i];
-            const expectedStarPattern = expectedQueries[i];
-            expect(unionQuery.starPatterns.size).toBe(expectedStarPattern.size);
-            for (const [subject, starPatterns] of unionQuery.starPatterns) {
-              expect(starPatterns).toStrictEqual(expectedStarPattern.get(subject));
-            }
-          }
-
+            expect(firstBranch.union).toBeUndefined();
+            expect(secondBranch.union).toBeUndefined();
+            expect(thirdBranch.union).toBeUndefined();
+            expect(forthBranch.union).toBeUndefined();
+          });
         });
 
-        it('alternative with sequence containing alternative', () => {
-          const query = `PREFIX snvoc: <http://exemple.be#>
-
-            SELECT
-                *
-            WHERE {
-                ?message (snvoc:test1/(snvoc:test2|snvoc:test4*))|snvoc:test3 ?foo .
-          }`;
-
-          const resp = generateQuery(translate(query));
-
-          const test1seq1 = DF.blankNode("http://exemple.be#test1_message");
-          const test1Seq1StarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test1',
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: 'http://exemple.be#test1',
-                      object: test1seq1,
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
-
-          const test2StarPattern: [string, IStarPatternWithDependencies] = [
-            test1seq1.value,
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test2',
-                  {
-                    triple: new Triple({
-                      subject: test1seq1.value,
-                      predicate: 'http://exemple.be#test2',
-                      object: DF.variable('foo')
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: test1seq1.value,
-              isVariable: false,
-            }
-          ];
-
-          const test4StarPattern: [string, IStarPatternWithDependencies] = [
-            test1seq1.value,
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test4',
-                  {
-                    triple: new Triple({
-                      subject: test1seq1.value,
-                      predicate: 'http://exemple.be#test4',
-                      cardinality: { min: 0, max: -1 },
-                      object: DF.variable('foo')
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: test1seq1.value,
-              isVariable: false,
-            }
-          ];
-
-          const starPatternUnionOption1 = new Map([test1Seq1StarPattern]);
-
-          const test3StarPattern: [string, IStarPatternWithDependencies] = [
-            'message',
-            {
-              starPattern: new Map([
-                [
-                  'http://exemple.be#test3',
-                  {
-                    triple: new Triple({
-                      subject: 'message',
-                      predicate: 'http://exemple.be#test3',
-                      object: DF.variable("foo")
-                    }),
-                    dependencies: undefined
-                  }
-                ],
-              ]),
-              name: "message",
-              isVariable: true,
-            }
-          ];
-
-          const starPatternUnionOption2 = new Map([test3StarPattern]);
-
-
-          expect(resp.starPatterns.size).toBe(0);
-          expect(resp.union).toBeDefined();
-          const union = resp.union!
-          expect(union.length).toBe(1);
-          const unionQueries = union[0];
-          expect(unionQueries.length).toBe(2);
-
-          const firstBranch = unionQueries[0];
-          const secondBranch = unionQueries[1];
-
-          expect(secondBranch.starPatterns).toStrictEqual(starPatternUnionOption2);
-
-          expect(firstBranch.starPatterns).toStrictEqual(starPatternUnionOption1);
-
-          expect(firstBranch.union).toBeDefined();
-          const nestedFirstBranchUnion = firstBranch.union!;
-          expect(nestedFirstBranchUnion.length).toBe(1);
-          const nestedFirstQueriesUnion = nestedFirstBranchUnion[0];
-          expect(nestedFirstQueriesUnion.length).toBe(2);
-          nestedFirstQueriesUnion[0].starPatterns = new Map([test2StarPattern]);
-          expect(nestedFirstQueriesUnion[0].union).toBeUndefined();
-          nestedFirstQueriesUnion[1].starPatterns = new Map([test4StarPattern]);
-          expect(nestedFirstQueriesUnion[1].union).toBeUndefined();
-        });
       });
     });
 
@@ -3689,7 +3888,7 @@ describe('query', () => {
                       subject: 'originalPostInner',
                       predicate: RDF_TYPE,
                       object: DF.namedNode(`${SNVOC_PREFIX}Post`),
-                      isOptional:true
+                      isOptional: true
                     }),
                     dependencies: undefined
                   }
@@ -3723,7 +3922,7 @@ describe('query', () => {
                       predicate: `${SNVOC_PREFIX}replyOf`,
                       object: DF.variable(`originalPostInner`),
                       cardinality: { min: 0, max: -1 },
-                      isOptional:true
+                      isOptional: true
                     }),
                     dependencies: originalPostInnerStarPattern[1]
                   }
@@ -3773,8 +3972,8 @@ describe('query', () => {
                   }
                 ],
               ]),
-              name:'moderator',
-              isVariable:true
+              name: 'moderator',
+              isVariable: true
             }
           ];
 
@@ -3827,8 +4026,8 @@ describe('query', () => {
                   }
                 ],
               ]),
-              name:'forum',
-              isVariable:true
+              name: 'forum',
+              isVariable: true
             }
           ];
 
