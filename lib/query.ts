@@ -6,7 +6,7 @@ import { DF } from './constant';
 
 interface IAccumulatedTriples { triples: Map<string, ITriple>, isVariable: boolean }
 /**
- * A query divided into subject group
+ * A query divided into star patterns
  */
 export interface IQuery {
   // star patterns indexed by subject
@@ -33,7 +33,7 @@ export function generateStarPatternUnion(union: IQuery[][], starPatternName: str
 }
 
 /**
- * Divide a query into subject group
+ * Divide a query into star patterns
  * @param {Algebra.Operation} algebraQuery - the algebra of a query
  * @returns {Query} - A query divided into subject group where the predicate has to be an IRI
  * @todo add support for the bind operator
@@ -99,17 +99,75 @@ function buildQuery(
       addADependencyToStarPattern(tripleWithDependencies, innerQuery);
     }
   }
+  addUnionDependencies(resp)
   return resp;
 }
 
-function addADependencyToStarPattern(tripleWithDependencies: ITripleWithDependencies, innerQuery: Map<string, IStarPatternWithDependencies>): void {
-  const linkedSubjectGroup = tripleWithDependencies.triple.getLinkedStarPattern();
-  if (linkedSubjectGroup !== undefined) {
-    const dependenStarPattern = innerQuery.get(linkedSubjectGroup);
-    if (dependenStarPattern !== undefined) {
-      tripleWithDependencies.dependencies = dependenStarPattern
+// could be made so that when adding a union we make sure to find the dependency
+// function should be revisited
+function addUnionDependencies(query: IQuery): void {
+  if (query.union === undefined) {
+    return;
+  }
+  //eslint-disable-next-line @typescript-eslint/prefer-for-of
+  for (let i = 0; i < query.union.length; i++) {
+    const union = query.union[i];
+    for (const branch of union) {
+      for (const starPattern of branch.starPatterns.values()) {
+        for (const triple of starPattern.starPattern.values()) {
+          if (triple.dependencies === undefined) {
+            const linkedStarPattern = triple.triple.getLinkedStarPattern();
+            if (linkedStarPattern !== undefined) {
+              const dependency = query.starPatterns.get(linkedStarPattern);
+              if (dependency !== undefined) {
+                triple.dependencies = dependency;
+                continue;
+              }
+              //searchDependencyInUnion(query.union, i, triple);
+            }
+          }
+        }
+      }
     }
   }
+}
+
+/** 
+ to figure out if it make sense
+function searchDependencyInUnion(unions: IQuery[][], currentBranch: number, triple: ITripleWithDependencies) {
+  const linkedStarPattern = triple.triple.getLinkedStarPattern();
+  if (linkedStarPattern === undefined || triple.dependencies === undefined) {
+    return;
+  }
+  for (let i = 0; i < unions.length; i++) {
+    const union = unions[i];
+    if (i === currentBranch) {
+      continue;
+    }
+    for (const branch of union) {
+      const dependency = branch.starPatterns.get(linkedStarPattern);
+      if (dependency !== undefined) {
+        triple.dependencies = dependency;
+        return;
+      }
+    }
+  }
+
+}
+*/
+
+function addADependencyToStarPattern(
+  tripleWithDependencies: ITripleWithDependencies,
+  innerQuery: Map<string, IStarPatternWithDependencies>): void {
+  const linkedStarPattern = tripleWithDependencies.triple.getLinkedStarPattern();
+  if (linkedStarPattern !== undefined) {
+    const dependentStarPattern = innerQuery.get(linkedStarPattern);
+    if (dependentStarPattern !== undefined) {
+      tripleWithDependencies.dependencies = dependentStarPattern
+    }
+
+  }
+
 }
 
 namespace QueryHandler {
