@@ -113,6 +113,44 @@ describe('Bindings', () => {
             expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
         });
 
+        it('should have one binding with optional', () => {
+            const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p0"], closed: true });
+            const linkedShape = new Map<string, IShape>();
+
+            const triple: Triple = new Triple({
+                subject: 'y',
+                predicate: 'aaa',
+                object: [DF.namedNode('o0')],
+                isOptional:true
+            });
+            const starPattern: IStarPatternWithDependencies = {
+                starPattern: new Map([
+                    [
+                        'p0',
+                        {
+                            triple,
+                            dependencies: undefined
+                        }
+                    ],
+                ]),
+                name: "y",
+                isVariable: true,
+
+            };
+
+            const expectedBindings = new Map([[triple.predicate, triple]]);
+
+
+            const bindings = new Bindings(shape, starPattern, linkedShape);
+
+            expect(bindings.isFullyBounded()).toBe(true);
+            expect(bindings.shouldVisitShape()).toBe(true);
+            expect(bindings.getUnboundedTriple()).toStrictEqual([]);
+            expect(bindings.getBindings()).toStrictEqual(expectedBindings);
+            expect(bindings.getBoundTriple()).toStrictEqual([triple]);
+            expect(bindings.getNestedContainedStarPatternName()).toStrictEqual([]);
+        });
+
         it('should have one binding with an open shape', () => {
             const shape: Shape = new Shape({ name: 'foo', positivePredicates: ["p_0"], closed: false });
             const linkedShape = new Map<string, IShape>();
@@ -4171,6 +4209,70 @@ describe('UnionBinding', () => {
 
         expect(unionBinding.areAllContained).toBe(true);
         expect(unionBinding.hasOneContained).toBe(true);
+    });
+
+    it('should handle a case with dependencies', () => {
+        const shape: Shape = new Shape({
+            name: 'foo', positivePredicates: [
+                {
+                    name: "p0",
+                    constraint: {
+                        type: ContraintType.SHAPE,
+                        value: new Set(["foo2"])
+                    }
+                }
+                , "foo1"], closed: true
+        });
+
+        const shape2: Shape = new Shape({
+            name: 'foo2', positivePredicates: ["foo1"], closed: true
+        });
+
+        const linkedShape = new Map<string, IShape>([["foo2", shape2]]);
+        const dependent: IStarPatternWithDependencies = {
+            starPattern: new Map([
+                ["bar2",
+                    {
+                        triple: new Triple({ subject: "bar2", predicate: "foo1", object: DF.blankNode() }),
+                    }
+
+                ]
+            ]),
+            name: "bar2",
+            isVariable: true,
+        };
+        const union: IStarPatternWithDependencies[] = [
+            {
+                starPattern: new Map([
+                    ["p0",
+                        {
+                            triple: new Triple({ subject: "bar", predicate: "p0", object: DF.variable("bar2") }),
+                            dependencies: dependent
+                        }
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true,
+            },
+            {
+                starPattern: new Map([
+                    ["foo1",
+                        { triple: new Triple({ subject: "bar", predicate: "foo1", object: DF.blankNode() }) }
+
+                    ]
+                ]),
+                name: "bar",
+                isVariable: true
+            }
+        ];
+        const unionBinding = new UnionBinding(shape, union, linkedShape);
+
+        expect(unionBinding.areAllContained).toBe(true);
+        expect(unionBinding.hasOneContained).toBe(true);
+        expect(unionBinding.dependentStarPattern).toStrictEqual([{
+            starPattern:"bar2",
+            shape:["foo2"]
+        }])
     });
 });
 
