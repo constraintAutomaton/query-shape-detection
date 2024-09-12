@@ -100,10 +100,13 @@ export class Bindings implements IBindings {
                     predicates = predicates.concat(predicatesOneOf);
                 }
             }
-            if (singlePredicate === undefined && predicates.length === 0) {
+            if (!this.strict && triple.isOptional === true) {
+                this.bindings.set(triple.predicate, triple);
+            } else if (singlePredicate === undefined && predicates.length === 0) {
                 this.unboundTriple.push(triple);
                 continue;
             }
+            
             if (singlePredicate !== undefined) {
                 predicates.push(singlePredicate);
             }
@@ -134,9 +137,6 @@ export class Bindings implements IBindings {
                 this.bindings.set(triple.predicate, triple);
                 this.shapePredicateBind.set(predicate.name, true);
                 break;
-            }
-            if(!this.strict && triple.isOptional === true){
-                this.bindings.set(triple.predicate, triple);
             }
 
         }
@@ -181,8 +181,8 @@ export class Bindings implements IBindings {
             for (const nestedConstrainStarPattern of result.values()) {
                 nestedContainedStarPatternName = nestedContainedStarPatternName.concat(nestedConstrainStarPattern);
             }
-            // delete duplicate
 
+            // delete duplicate
             nestedContainedStarPatternName = Array.from(new Set(nestedContainedStarPatternName));
             this.nestedContainedStarPatternName = nestedContainedStarPatternName
                 .map((starPattern) => {
@@ -192,6 +192,11 @@ export class Bindings implements IBindings {
                     };
                 });
 
+            for (const unionBinding of this.unionBindings) {
+                this.nestedContainedStarPatternName = this.nestedContainedStarPatternName.concat(unionBinding.dependentStarPattern);
+            }
+            // delete duplicate
+            this.nestedContainedStarPatternName = Array.from(new Set(this.nestedContainedStarPatternName));
         }
     }
 
@@ -373,6 +378,7 @@ export class UnionBinding {
     private readonly bindings: IBindings[];
     public readonly hasOneContained: boolean;
     public readonly areAllContained: boolean;
+    public readonly dependentStarPattern: IDependentStarPattern[];
 
     public constructor(shape: IShape, union: IStarPatternWithDependencies[], linkedShape: Map<string, IShape>) {
         this.bindings = [];
@@ -382,6 +388,15 @@ export class UnionBinding {
         this.hasOneContained = this.determineHasOneAtLeastContainment();
         this.areAllContained = this.determineAllContained();
 
+        const dependentStarPatternSet = new Map<string, IDependentStarPattern>();
+
+        for (const binding of this.bindings) {
+            for (const startPattern of binding.getNestedContainedStarPatternName()) {
+                dependentStarPatternSet.set(startPattern.starPattern, startPattern);
+            }
+        }
+
+        this.dependentStarPattern = Array.from(dependentStarPatternSet.values());
     }
 
     private determineHasOneAtLeastContainment(): boolean {
