@@ -940,6 +940,51 @@ describe('solveShapeQueryContainment', () => {
     
                 expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
             });
+
+            it('interactive-discover-8', async ()=>{
+                const queryString = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+                                    PREFIX sn: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/data/>
+                                    PREFIX snvoc: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+                                    PREFIX sntag: <http://localhost:3000/www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+                                    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                                    PREFIX dbpedia: <http://localhost:3000/dbpedia.org/resource/>
+                                    PREFIX dbpedia-owl: <http://localhost:3000/dbpedia.org/ontology/>
+
+                                    SELECT
+                                    DISTINCT
+                                        ?creator
+                                        ?messageContent
+                                    WHERE
+                                    {
+                                        ?person snvoc:likes [ snvoc:hasPost|snvoc:hasComment ?message ].
+                                        ?message snvoc:hasCreator ?creator.
+                                        ?otherMessage snvoc:hasCreator ?creator;
+                                            snvoc:content ?messageContent.
+                                    } LIMIT 10`;
+                const querySparql = translate(queryString);
+                const query = generateQuery(querySparql);
+    
+                const shapeIndexed: Map<string, IShape> = await generateSolidBenchShapes();
+                const shapes: IShape[] = Array.from(shapeIndexed.values());
+    
+                const resp = solveShapeQueryContainment({ query, shapes });
+    
+                const conditionalLink: IConditionalLink[] = [];
+                const visitShapeBoundedResource = new Map([
+                    ["http://example.com#Comment", true],
+                    ["http://example.com#Post", true],
+                    ["http://example.com#Profile", true]
+                ]);
+                const starPatternsContainment = new Map<StarPatternName, IContainmentResult>([
+                    ["person", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Profile"] }],
+                    ["message", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment", "http://example.com#Post"]}],
+                    ["otherMessage", { result: ContainmentResult.CONTAIN, target: ["http://example.com#Comment" ,"http://example.com#Post"] }],
+                ]);
+    
+                expect(resp).toStrictEqual({ conditionalLink, visitShapeBoundedResource, starPatternsContainment });
+            });
         });
 
         describe('complex', ()=>{
